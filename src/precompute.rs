@@ -1,7 +1,7 @@
-use std::{collections::{HashMap, HashSet}, iter::FromIterator};
-use itertools::{Itertools};
+use std::{collections::{HashMap, HashSet}, iter::{FromIterator}};
+use itertools::{Itertools, repeat_n};
 
-use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType}};
+use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType, get_val, NUM_DICE}};
 extern crate web_sys;
 
 
@@ -9,7 +9,8 @@ extern crate web_sys;
 pub struct Precomputed {
     cache_calc_score: Vec<ScoreType>,
     cache_get_valid_rolls: Vec<Option<Vec<DiceSet>>>,
-    cache_get_rolls: Vec<Vec<DiceSet>>
+    cache_get_rolls: Vec<Vec<DiceSet>>,
+    cache_get_ok_rolls: Vec<(Vec<(DiceSet, ProbType)>, ProbType)>
 }
 
 impl Default for Precomputed {
@@ -17,7 +18,8 @@ impl Default for Precomputed {
         let mut precomputed = Precomputed {
             cache_calc_score: (0..=dice_set::MAX_VAL).map(|_| ScoreType::MAX).collect(),
             cache_get_valid_rolls: (0..=dice_set::MAX_VAL).map(|_| Option::None).collect(),
-            cache_get_rolls: (0..=6).map(|_|Vec::new()).collect()
+            cache_get_rolls: (0..=6).map(|_| Vec::new()).collect(),
+            cache_get_ok_rolls: (0..=6).map(|_| (Vec::new(), get_val(0))).collect()
         };
 
         let mut all_valid_dicesets = Vec::new();
@@ -38,6 +40,10 @@ impl Default for Precomputed {
             precomputed.cache_get_valid_rolls[*dice as usize] = Some(vec);
         }
 
+        for k in 0..=6 {
+            precomputed.cache_get_ok_rolls[k] = precomputed.get_ok_rolls_mut(k);
+        }
+
         precomputed
     }
 }
@@ -56,7 +62,7 @@ impl Precomputed {
     }
 
     pub fn get_ok_rolls(&self, dice_left: usize) -> &(Vec<(DiceSet, ProbType)>, ProbType) {
-        todo!();
+        &self.cache_get_ok_rolls[dice_left]
     }
 
     fn get_valid_holds_mut(&self, roll: dice_set::DiceSet) -> Vec<DiceSet> {
@@ -155,7 +161,33 @@ impl Precomputed {
     }
 
     fn get_ok_rolls_mut(&mut self, dice_left: usize) -> (Vec<(DiceSet, ProbType)>, ProbType) {
-        todo!();
+        let mut zero_tot = 0;
+        let mut ok_rolls: Vec<(DiceSet, ProbType)> = Vec::new();
+        let roll_freq = self.get_roll_distribution(dice_left);
+        let total_ct: usize = roll_freq.values().sum();
+        for (roll, roll_ct) in roll_freq {
+            if self.calc_score(roll) == 0 {
+                zero_tot += roll_ct;
+                continue;
+            }
+            ok_rolls.push((roll, get_val(roll_ct as i64) / get_val(total_ct as i64)));
+        }
+        let rem_prob = get_val(zero_tot as i64) / get_val(total_ct as i64);
+        (ok_rolls, rem_prob)
+    }
+
+    pub fn get_roll_distribution(&self, dice_left: usize) -> HashMap<DiceSet, usize> {
+        let mut roll_freq: HashMap<DiceSet, usize> = HashMap::new();
+        let iter =  dice_set::get_chars().iter();
+        for comb in repeat_n(iter, NUM_DICE).multi_cartesian_product() {
+            let act_comb = comb.iter().map(|x| *x).join("");
+            let new_dice_set = dice_set::from_string(&act_comb);
+            if !roll_freq.contains_key(&new_dice_set) {
+                roll_freq.insert(new_dice_set, 0);
+            }
+            *roll_freq.get_mut(&new_dice_set).unwrap() += 1;
+        }
+        roll_freq
     }
 }
 

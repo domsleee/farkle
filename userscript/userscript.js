@@ -3,8 +3,8 @@
 // @namespace     http://www.example.com/
 // @description   WASM test
 // @include       *
-// @require       file:C:\Users\user\git\farkle\userscript\farkle.js
-// @require       file:C:\Users\user\git\farkle\userscript\userscript.js
+// @require       /Users/dom/git/farkle/userscript/farkle.js
+// @require       /Users/dom/git/farkle/userscript/userscript.js
 // ==/UserScript==
 
 (() => {

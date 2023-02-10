@@ -52,7 +52,7 @@ class Farkle {
             }
         }
 
-        const action = this.farkleSolver.decide_action_ext(heldScore, totalScores);
+        const action = this.farkleSolver.decide_action_ext(heldScore, diceInPlay.length, totalScores);
         log(`action: ${action}`)
         if (action === 'Stay') {
             this._getBankButton().click();

@@ -38,7 +38,13 @@ wasm-bindgen-test = "0.3.13"
 [profile.release]
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
+debug = 1
 
 [[bin]]
 name = "mybin"
 path = "src/bin.rs"
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+  "-C", "link-args=-z stack-size=1500000",
+]

@@ -57,7 +57,7 @@ impl Precomputed {
     }
 
     pub fn get_valid_holds(&self, roll: dice_set::DiceSet) -> &Vec<DiceSet> {
-        &self.cache_get_valid_rolls[roll as usize].as_ref().unwrap().as_ref()
+        self.cache_get_valid_rolls[roll as usize].as_ref().unwrap()
     }
     
     pub fn get_num_dice(&self, dice: dice_set::DiceSet) -> usize {
@@ -83,7 +83,7 @@ impl Precomputed {
                 let mut has_better_subset = false;
 
                 for k2 in 1..comb.len()-1 {
-                    for comb2 in comb.iter().map(|x| *x).combinations(k2) {
+                    for comb2 in comb.iter().copied().combinations(k2) {
                         let score2 = self.calc_score(dice_set::from_human_readable_str(&comb2));
                         if score2 >= score1 {
                             has_better_subset = true;
@@ -145,7 +145,7 @@ impl Precomputed {
         }
 
         let vals: HashSet<usize> = HashSet::from_iter(freqdist.iter().map(|(_, b) | *b));
-        if vals.len() == 1 && *vals.iter().nth(0).unwrap() == 2 && sorted_str.len() == 6 {
+        if vals.len() == 1 && *vals.iter().next().unwrap() == 2 && sorted_str.len() == 6 {
             max_score = ScoreType::max(max_score, 1500);
         }
 
@@ -160,7 +160,7 @@ impl Precomputed {
         }
         let mut res = Vec::new();
         for comb in dice_set::get_chars().iter().combinations_with_replacement(dice_left) {
-            let act_comb = comb.iter().map(|x| *x).join("");
+            let act_comb = comb.iter().copied().join("");
             let new_dice_set = dice_set::from_string(&act_comb);
             res.push(new_dice_set);
         }
@@ -187,11 +187,9 @@ impl Precomputed {
         let mut roll_freq: HashMap<DiceSet, usize> = HashMap::new();
         let iter =  dice_set::get_chars().iter();
         for comb in repeat_n(iter, NUM_DICE).multi_cartesian_product() {
-            let act_comb = comb.iter().map(|x| *x).join("");
+            let act_comb = comb.iter().copied().join("");
             let new_dice_set = dice_set::from_string(&act_comb);
-            if !roll_freq.contains_key(&new_dice_set) {
-                roll_freq.insert(new_dice_set, 0);
-            }
+            roll_freq.entry(new_dice_set).or_insert(0);
             *roll_freq.get_mut(&new_dice_set).unwrap() += 1;
         }
         roll_freq

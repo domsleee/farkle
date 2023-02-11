@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::dice_set;
 use crate::defs::*;
-use crate::dice_set::to_sorted_string;
+
 use crate::precompute::Precomputed;
 
 type MutableCache = HashMap<u64, (ProbType, Action)>;
@@ -31,12 +31,12 @@ impl FarkleSolver {
 
     pub fn decide_action_ext(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> String {
         let (prob, action) = self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &scores);
-        return action.to_string();
+        action.to_string()
     }
 
     pub fn decide_held_dice_ext(&mut self, held_score: ScoreType, roll: String, scores: Vec<ScoreType>) -> String {
         let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &scores);
-        return dice_set::to_sorted_string(held_dice).to_string();
+        dice_set::to_sorted_string(held_dice)
     }
 }
 
@@ -85,7 +85,7 @@ impl FarkleSolverInternal {
             *rotated_scores.last_mut().unwrap() += ScoreType::max(held_score, 50); // note: approx
             prob_roll = rem_prob * (get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &rotated_scores).0);
             for (roll, prob) in ok_rolls {
-                let decision = self.decide_held_dice(cache_decide_action, held_score, *roll, &scores);
+                let decision = self.decide_held_dice(cache_decide_action, held_score, *roll, scores);
                 prob_roll += prob * decision.0;
             }
         }
@@ -109,8 +109,8 @@ impl FarkleSolverInternal {
                 (max_prob, max_comb) = (new_prob, hold.to_owned());
             }
         }
-        let res = (max_prob, max_comb);
-        res
+        
+        (max_prob, max_comb)
     }
 
     fn get_cache_key(held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> u64 {
@@ -118,8 +118,8 @@ impl FarkleSolverInternal {
         let mut key = 0u64;
         key |= Self::score_to_byte(held_score) as u64;
         key |= (dice_left as u64) << 8;
-        for i in 0..scores.len() {
-            key |= (scores[i] as u64) << (16 + 8*i);
+        for (i, score) in scores.iter().enumerate() {
+            key |= (*score as u64) << (16 + 8*i);
         }
         key
     }

@@ -41,7 +41,7 @@ pub fn to_human_readable(mut d: DiceSet) -> Vec<String> {
 pub fn to_sorted_string(d: DiceSet) -> String {
     let mut hr = to_human_readable(d);
     hr.sort();
-    return hr.join("");
+    hr.join("")
 }
 
 pub fn from_char(c: char) -> DiceSet {
@@ -64,17 +64,17 @@ pub fn from_string(readable: &str) -> DiceSet {
 pub fn from_human_readable_str(readable: &Vec<&String>) -> DiceSet {
     let mut res: Vec<char> = Vec::new();
     for s in readable {
-        let c = s.chars().nth(0).unwrap();
+        let c = s.chars().next().unwrap();
         res.push(c);
     }
-    return from_human_readable(res);
+    from_human_readable(res)
 }
 
 
 pub fn get_freqdist(d: DiceSet) -> FrequencyDistribution<char> {
     let mut freqdist = FrequencyDistribution::new();
     for s in to_human_readable(d) {
-        let c = s.chars().nth(0).unwrap();
+        let c = s.chars().next().unwrap();
         freqdist.insert(c);
     }
     freqdist
@@ -82,7 +82,7 @@ pub fn get_freqdist(d: DiceSet) -> FrequencyDistribution<char> {
 
 pub fn subtract_dice(d1: DiceSet, s: &str) -> DiceSet {
     debug_assert!(d1 >= from_string(s), "{d1} {} not bigger than {s} ({})", to_sorted_string(d1), from_string(s));
-    return d1 - from_string(s);
+    d1 - from_string(s)
 }
 
 #[cfg(test)]

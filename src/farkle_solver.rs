@@ -51,6 +51,8 @@ impl FarkleSolver {
 }
 
 impl FarkleSolverInternal {
+    // 22901694 in 4m32 
+    // 200 * 6 * 200^2 = 48e6
     fn decide_action(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> (ProbType, Action) {
         if held_score + scores[0] >= SCORE_WIN {
             return (get_val(1), Action::Stay);
@@ -86,10 +88,12 @@ impl FarkleSolverInternal {
 
         // you can roll
         // `get_ok_rolls` can be grouped by the output of `get_valid_holds`. e.g. 14 and 16 both have the same valid holds of [1]
-        let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls(dice_left);
-        debug_assert!(rem_prob > &0f64);
         let mut prob_roll = get_val(0);
         if prob_win_stay < get_val(1) {
+            // (Vec<(DiceSet, ProbType)>, ProbType)
+            // (all_ok_rolls: Vec<DiceSet>, ok_rolls: Vec<(usize, ProbType)>, rem_prob: ProbType)
+            let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls_merged(dice_left);
+            debug_assert!(rem_prob > &0f64);
             *rotated_scores.last_mut().unwrap() += 50; // note: approx
             prob_roll = rem_prob * (get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &rotated_scores).0);
             for (roll, prob) in ok_rolls {
@@ -135,5 +139,5 @@ impl FarkleSolverInternal {
         key
     }
 
-    fn score_to_byte(score: ScoreType) -> u8 { (score / 200) as u8 }
+    fn score_to_byte(score: ScoreType) -> u8 { (score / 50) as u8 }
 }

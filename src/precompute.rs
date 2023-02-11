@@ -1,4 +1,5 @@
 use std::{collections::{HashMap, HashSet}, iter::{FromIterator}};
+use is_sorted::IsSorted;
 use itertools::{Itertools, repeat_n};
 
 use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType, get_val}};
@@ -12,6 +13,7 @@ pub struct Precomputed {
     cache_get_num_dice: Vec<usize>,
     cache_get_rolls: Vec<Vec<DiceSet>>,
     cache_get_ok_rolls: Vec<(Vec<(DiceSet, ProbType)>, ProbType)>,
+    cache_get_ok_rolls_grouped: Vec<(Vec<(DiceSet, ProbType)>, ProbType)>,
 }
 
 impl Default for Precomputed {
@@ -21,7 +23,8 @@ impl Default for Precomputed {
             cache_get_valid_rolls: (0..=dice_set::MAX_VAL).map(|_| Option::None).collect(),
             cache_get_num_dice: (0..=dice_set::MAX_VAL).map(|_| 0).collect(),
             cache_get_rolls: (0..=6).map(|_| Vec::new()).collect(),
-            cache_get_ok_rolls: (0..=6).map(|_| (Vec::new(), get_val(0))).collect()
+            cache_get_ok_rolls: (0..=6).map(|_| (Vec::new(), get_val(0))).collect(),
+            cache_get_ok_rolls_grouped: (0..=6).map(|_| (Vec::new(), get_val(0))).collect()
         };
 
         let mut all_valid_dicesets = Vec::new();
@@ -45,6 +48,7 @@ impl Default for Precomputed {
 
         for k in 0..=6 {
             precomputed.cache_get_ok_rolls[k] = precomputed.get_ok_rolls_mut(k);
+            precomputed.cache_get_ok_rolls_grouped[k] = precomputed.get_ok_rolls_grouped_mut(k);
         }
 
         precomputed
@@ -72,6 +76,10 @@ impl Precomputed {
         &self.cache_get_ok_rolls[dice_left]
     }
 
+    pub fn get_ok_rolls_merged(&self, dice_left: usize) -> &(Vec<(DiceSet, ProbType)>, ProbType) {
+        &self.cache_get_ok_rolls_grouped[dice_left]
+    }
+
     fn get_valid_holds_mut(&self, roll: dice_set::DiceSet) -> Vec<DiceSet> {
         let mut res: Vec<DiceSet> = Vec::new();
         let chars = dice_set::to_human_readable(roll);
@@ -96,7 +104,7 @@ impl Precomputed {
                 res.push(dice_set::from_human_readable_str(&comb));
             }
         }
-
+        res.sort();
         res
     }
 
@@ -183,7 +191,7 @@ impl Precomputed {
         (ok_rolls, rem_prob)
     }
 
-    pub fn get_roll_distribution(&self, dice_left: usize) -> HashMap<DiceSet, usize> {
+    fn get_roll_distribution(&self, dice_left: usize) -> HashMap<DiceSet, usize> {
         let mut roll_freq: HashMap<DiceSet, usize> = HashMap::new();
         let iter =  dice_set::get_chars().iter();
         for comb in repeat_n(iter, dice_left).multi_cartesian_product() {
@@ -193,6 +201,29 @@ impl Precomputed {
             *roll_freq.get_mut(&new_dice_set).unwrap() += 1;
         }
         roll_freq
+    }
+
+    fn get_ok_rolls_grouped_mut(&mut self, dice_left: usize) -> (Vec<(DiceSet, ProbType)>, ProbType) {
+        // idea: group ok_rolls by their valid_holds, and sum their probabilities
+        //       
+        let (ok_rolls, rem_prob) = &self.get_ok_rolls(dice_left);
+
+        let mut valid_holds_to_roll: HashMap<_, (DiceSet, ProbType)> = HashMap::new();
+        for (roll, prob) in ok_rolls {
+            let valid_holds = self.get_valid_holds(*roll).to_owned();
+            assert!(IsSorted::is_sorted(&mut valid_holds.iter()));
+            if !valid_holds_to_roll.contains_key(&valid_holds) {
+                valid_holds_to_roll.insert(valid_holds, (*roll, *prob));
+            } else {
+                let (rep_roll, curr_prob) = valid_holds_to_roll.get(&valid_holds).unwrap();
+                valid_holds_to_roll.insert(valid_holds, (*rep_roll, curr_prob + prob));
+            }
+        }
+
+        (
+            valid_holds_to_roll.values().map(|x| *x).collect(),
+            *rem_prob
+        )
     }
 }
 

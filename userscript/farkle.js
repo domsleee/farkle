@@ -3,15 +3,13 @@ const log = console.log;
 
 class Farkle {
     constructor(wasm_bindgen) {
-        const { greet, FarkleSolver } = wasm_bindgen;
-        this.greet = greet;
+        const { FarkleSolver } = wasm_bindgen;
         this.farkleSolver = new FarkleSolver();
         this.dicePositions = {};
         for (let id of this._getDiceIds()) this.dicePositions[id] = '';
     }
 
     async run() {
-        log(this.greet());
         while (true) {
             await this._waitForYourTurn();
             await this._doAction(this._getText());
@@ -20,23 +18,19 @@ class Farkle {
     }
 
     async _doAction(text) {
-        const heldScore = parseInt($('#bottom-player-round-score b').text());
+        let heldScore = this._getHeldScore();
         const score = parseInt($('#bottom-player-total').text());
         const otherScore = parseInt($('#top-player-total').text());
-        const diceInPlayEls = Array.from($('.dice'))
-            .map(el => el)
-            .filter(el => !el.alt.includes('saved'))
-            .sort((a, b) => parseInt(a.alt) - parseInt(b.alt));
-        const diceInPlay = diceInPlayEls.map(t => parseInt(t.alt));
+        let [diceInPlayEls, diceInPlay] = this._getDiceInPlay();
         const totalScores = [score, otherScore];
-        let totalDiceHeld = 6 - diceInPlay.length;
+        let numDiceHeldForAction = 0;
         // log(`heldScore: ${heldScore}, dice in play: [${diceInPlay}], scores: [${totalScores}]`);
         if (diceInPlay.length > 0) {
             const roll = diceInPlay.join('').toString();
             log(`decide_held_dice_ext(held_score: ${heldScore}, roll: ${roll}, scores: [${totalScores}])...`);
             const diceToHold = this.farkleSolver.decide_held_dice_ext(heldScore, roll, totalScores);
             log(`diceToHold: ${diceToHold}`);
-            totalDiceHeld += diceToHold.length;
+            numDiceHeldForAction = diceToHold.length;
             if (diceToHold.length > 0) {
                 let elsToClick = [];
                 let j = 0;
@@ -54,9 +48,10 @@ class Farkle {
             }
         }
 
-        const diceLeft = totalDiceHeld == 6
-            ? 6
-            : 6 - totalDiceHeld;
+        heldScore = this._getHeldScore();
+        let diceLeft = diceInPlay.length - numDiceHeldForAction;
+        if (diceLeft === 0) diceLeft = 6;
+
         if (diceLeft <= 0 || diceLeft > 6) {
             debugger;
         }
@@ -68,6 +63,16 @@ class Farkle {
         } else {
             this._getRollButton().click();
         }
+    }
+
+    _getHeldScore = () => parseInt($('#bottom-player-round-score b').text());
+    _getDiceInPlay = () => {
+        const diceInPlayEls = Array.from($('.dice'))
+            .map(el => el)
+            .filter(el => !el.alt.includes('saved'))
+            .sort((a, b) => parseInt(a.alt) - parseInt(b.alt));
+        const diceInPlay = diceInPlayEls.map(t => parseInt(t.alt));
+        return [diceInPlayEls, diceInPlay];
     }
 
     _getRollButton = () => $("#throw-button button")[0];

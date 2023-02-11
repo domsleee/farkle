@@ -16,9 +16,3 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 extern {
     fn alert(s: &str);
 }
-
-#[wasm_bindgen]
-pub fn greet() -> String {
-    //alert("Hello, farkle!");
-    "55".to_string()
-}

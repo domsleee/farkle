@@ -1,7 +1,7 @@
 use std::{collections::{HashMap, HashSet}, iter::{FromIterator}};
 use itertools::{Itertools, repeat_n};
 
-use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType, get_val, NUM_DICE}};
+use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType, get_val}};
 extern crate web_sys;
 
 
@@ -82,7 +82,7 @@ impl Precomputed {
 
                 let mut has_better_subset = false;
 
-                for k2 in 1..comb.len()-1 {
+                for k2 in 1..comb.len() {
                     for comb2 in comb.iter().copied().combinations(k2) {
                         let score2 = self.calc_score(dice_set::from_human_readable_str(&comb2));
                         if score2 >= score1 {
@@ -186,7 +186,7 @@ impl Precomputed {
     pub fn get_roll_distribution(&self, dice_left: usize) -> HashMap<DiceSet, usize> {
         let mut roll_freq: HashMap<DiceSet, usize> = HashMap::new();
         let iter =  dice_set::get_chars().iter();
-        for comb in repeat_n(iter, NUM_DICE).multi_cartesian_product() {
+        for comb in repeat_n(iter, dice_left).multi_cartesian_product() {
             let act_comb = comb.iter().copied().join("");
             let new_dice_set = dice_set::from_string(&act_comb);
             roll_freq.entry(new_dice_set).or_insert(0);
@@ -221,8 +221,9 @@ mod tests {
 
     #[test]
     pub fn test_get_valid_holds() {
-        let holds = Precomputed::default().get_valid_holds(dice_set::from_string("223152"));
-        assert!(true);
+        let precomputed = Precomputed::default();
+        let holds = precomputed.get_valid_holds(dice_set::from_string("14"));
+        assert!(holds.len() == 1);
     }
 }
 

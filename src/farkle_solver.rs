@@ -38,6 +38,10 @@ impl FarkleSolver {
         let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &scores);
         dice_set::to_sorted_string(held_dice)
     }
+
+    pub fn get_cache_info(&self) -> String {
+        self.cache_decide_action.len().to_string()
+    }
 }
 
 impl FarkleSolver {
@@ -51,12 +55,15 @@ impl FarkleSolverInternal {
         if held_score + scores[0] >= SCORE_WIN {
             return (get_val(1), Action::Stay);
         }
+        if *scores.iter().max().unwrap() >= SCORE_WIN {
+            return (get_val(0), Action::Stay);
+        }
+
+        debug_assert!(dice_left != 0);
         
         let cache_key = Self::get_cache_key(held_score, dice_left, scores);
-        if cache_decide_action.contains_key(&cache_key) {
-            return *cache_decide_action.get(&cache_key).unwrap();
-        }
-        if DEBUG { println!("decide_action({held_score}, {dice_left}, {scores:?})"); }
+        if let Some(res) = cache_decide_action.get(&cache_key) { return *res }
+        if DEBUG { println!("decide_actionS({held_score}, {dice_left}, {scores:?})"); }
 
         let mut rotated_scores = {
             let mut new_scores = scores.clone();
@@ -80,9 +87,10 @@ impl FarkleSolverInternal {
         // you can roll
         // `get_ok_rolls` can be grouped by the output of `get_valid_holds`. e.g. 14 and 16 both have the same valid holds of [1]
         let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls(dice_left);
+        debug_assert!(rem_prob > &0f64);
         let mut prob_roll = get_val(0);
         if prob_win_stay < get_val(1) {
-            *rotated_scores.last_mut().unwrap() += ScoreType::max(held_score, 50); // note: approx
+            *rotated_scores.last_mut().unwrap() += 50; // note: approx
             prob_roll = rem_prob * (get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &rotated_scores).0);
             for (roll, prob) in ok_rolls {
                 let decision = self.decide_held_dice(cache_decide_action, held_score, *roll, scores);
@@ -92,7 +100,7 @@ impl FarkleSolverInternal {
 
         let res = if prob_win_stay >= prob_roll { (prob_win_stay, Action::Stay) } else { (prob_roll, Action::Roll) };
         
-        if DEBUG { println!("decide_action(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}"); }
+        if DEBUG { println!("decide_actionE(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}"); }
         cache_decide_action.insert(cache_key, res);
         res
     }
@@ -102,8 +110,11 @@ impl FarkleSolverInternal {
         //return (get_val(1), *self.precomputed.get_valid_holds(roll).iter().nth(0).unwrap_or(&0));
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
         for hold in self.precomputed.get_valid_holds(roll) {
-            let new_held_score = held_score + self.precomputed.calc_score(roll);
-            let new_dice_left = self.precomputed.get_num_dice(roll) - self.precomputed.get_num_dice(*hold);
+            let new_held_score = held_score + self.precomputed.calc_score(*hold);
+            let mut new_dice_left = self.precomputed.get_num_dice(roll) - self.precomputed.get_num_dice(*hold);
+            if new_dice_left == 0 {
+                new_dice_left = 6;
+            }
             let (new_prob, _) = self.decide_action(cache_decide_action, new_held_score, new_dice_left, scores);
             if new_prob > max_prob {
                 (max_prob, max_comb) = (new_prob, hold.to_owned());
@@ -119,7 +130,7 @@ impl FarkleSolverInternal {
         key |= Self::score_to_byte(held_score) as u64;
         key |= (dice_left as u64) << 8;
         for (i, score) in scores.iter().enumerate() {
-            key |= (*score as u64) << (16 + 8*i);
+            key |= (Self::score_to_byte(*score) as u64) << (16 + 8*i);
         }
         key
     }

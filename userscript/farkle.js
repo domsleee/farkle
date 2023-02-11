@@ -29,15 +29,19 @@ class Farkle {
             .sort((a, b) => parseInt(a.alt) - parseInt(b.alt));
         const diceInPlay = diceInPlayEls.map(t => parseInt(t.alt));
         const totalScores = [score, otherScore];
-        log(`heldScore: ${heldScore}, dice in play: [${diceInPlay}], scores: [${totalScores}]`);
+        let totalDiceHeld = 6 - diceInPlay.length;
+        // log(`heldScore: ${heldScore}, dice in play: [${diceInPlay}], scores: [${totalScores}]`);
         if (diceInPlay.length > 0) {
-            const newHeldDice = this.farkleSolver.decide_held_dice_ext(heldScore, diceInPlay.join('').toString(), totalScores);
-            log(`newHeldDice: ${newHeldDice}`);
-            if (newHeldDice.length > 0) {
+            const roll = diceInPlay.join('').toString();
+            log(`decide_held_dice_ext(held_score: ${heldScore}, roll: ${roll}, scores: [${totalScores}])...`);
+            const diceToHold = this.farkleSolver.decide_held_dice_ext(heldScore, roll, totalScores);
+            log(`diceToHold: ${diceToHold}`);
+            totalDiceHeld += diceToHold.length;
+            if (diceToHold.length > 0) {
                 let elsToClick = [];
                 let j = 0;
                 for (let el of diceInPlayEls) {
-                    if (j < newHeldDice.length && el.alt === newHeldDice[j]) {
+                    if (j < diceToHold.length && el.alt === diceToHold[j]) {
                         elsToClick.push(el);
                         j += 1;
                     }
@@ -47,12 +51,17 @@ class Farkle {
                     await sleep(350);
                 }
                 await this._waitForStationaryDice();
-            } else {
-                return;
             }
         }
 
-        const action = this.farkleSolver.decide_action_ext(heldScore, diceInPlay.length, totalScores);
+        const diceLeft = totalDiceHeld == 6
+            ? 6
+            : 6 - totalDiceHeld;
+        if (diceLeft <= 0 || diceLeft > 6) {
+            debugger;
+        }
+        log(`decide_action_ext(held_score: ${heldScore}, dice_left: ${diceLeft}, scores: [${totalScores}])...`);
+        const action = this.farkleSolver.decide_action_ext(heldScore, diceLeft, totalScores);
         log(`action: ${action}`)
         if (action === 'Stay') {
             this._getBankButton().click();
@@ -65,13 +74,13 @@ class Farkle {
     _getBankButton = () => $("#bank-button button")[0];
 
     async _waitForYourTurn() {
-        log('waiting for turn...');
+        //log('waiting for turn...');
         while (true) {
             if (!this._getRollButton().disabled
                 || !this._getBankButton().disabled) break;
             await sleep(100);
         }
-        log('your turn');
+        //log('your turn');
     }
 
     async waitForClick() {

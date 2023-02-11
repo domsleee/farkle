@@ -7,7 +7,7 @@ use crate::defs::*;
 use crate::dice_set::to_sorted_string;
 use crate::precompute::Precomputed;
 
-type MutableCache = HashMap<(ScoreType, usize, Vec<ScoreType>), (ProbType, Action)>;
+type MutableCache = HashMap<u64, (ProbType, Action)>;
 
 const DEBUG: bool = false;
 #[wasm_bindgen]
@@ -52,7 +52,7 @@ impl FarkleSolverInternal {
             return (get_val(1), Action::Stay);
         }
         
-        let cache_key = (held_score, dice_left, scores.to_owned());
+        let cache_key = Self::get_cache_key(held_score, dice_left, scores);
         if cache_decide_action.contains_key(&cache_key) {
             return *cache_decide_action.get(&cache_key).unwrap();
         }
@@ -103,7 +103,8 @@ impl FarkleSolverInternal {
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
         for hold in self.precomputed.get_valid_holds(roll) {
             let new_held_score = held_score + self.precomputed.calc_score(roll);
-            let (new_prob, _) = self.decide_action(cache_decide_action, new_held_score, dice_set::to_sorted_string(*hold).len() - dice_set::to_sorted_string(*hold).len(), scores);
+            let new_dice_left = self.precomputed.get_num_dice(roll) - self.precomputed.get_num_dice(*hold);
+            let (new_prob, _) = self.decide_action(cache_decide_action, new_held_score, new_dice_left, scores);
             if new_prob > max_prob {
                 (max_prob, max_comb) = (new_prob, hold.to_owned());
             }
@@ -111,4 +112,17 @@ impl FarkleSolverInternal {
         let res = (max_prob, max_comb);
         res
     }
+
+    fn get_cache_key(held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> u64 {
+        debug_assert!(scores.len() < 7);
+        let mut key = 0u64;
+        key |= Self::score_to_byte(held_score) as u64;
+        key |= (dice_left as u64) << 8;
+        for i in 0..scores.len() {
+            key |= (scores[i] as u64) << (16 + 8*i);
+        }
+        key
+    }
+
+    fn score_to_byte(score: ScoreType) -> u8 { (score / 200) as u8 }
 }

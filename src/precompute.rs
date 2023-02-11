@@ -9,8 +9,9 @@ extern crate web_sys;
 pub struct Precomputed {
     cache_calc_score: Vec<ScoreType>,
     cache_get_valid_rolls: Vec<Option<Vec<DiceSet>>>,
+    cache_get_num_dice: Vec<usize>,
     cache_get_rolls: Vec<Vec<DiceSet>>,
-    cache_get_ok_rolls: Vec<(Vec<(DiceSet, ProbType)>, ProbType)>
+    cache_get_ok_rolls: Vec<(Vec<(DiceSet, ProbType)>, ProbType)>,
 }
 
 impl Default for Precomputed {
@@ -18,6 +19,7 @@ impl Default for Precomputed {
         let mut precomputed = Precomputed {
             cache_calc_score: (0..=dice_set::MAX_VAL).map(|_| ScoreType::MAX).collect(),
             cache_get_valid_rolls: (0..=dice_set::MAX_VAL).map(|_| Option::None).collect(),
+            cache_get_num_dice: (0..=dice_set::MAX_VAL).map(|_| 0).collect(),
             cache_get_rolls: (0..=6).map(|_| Vec::new()).collect(),
             cache_get_ok_rolls: (0..=6).map(|_| (Vec::new(), get_val(0))).collect()
         };
@@ -38,6 +40,7 @@ impl Default for Precomputed {
         for dice in &all_valid_dicesets {
             let vec = precomputed.get_valid_holds_mut(*dice);
             precomputed.cache_get_valid_rolls[*dice as usize] = Some(vec);
+            precomputed.cache_get_num_dice[*dice as usize] = dice_set::to_sorted_string(*dice).len();
         }
 
         for k in 0..=6 {
@@ -55,6 +58,10 @@ impl Precomputed {
 
     pub fn get_valid_holds(&self, roll: dice_set::DiceSet) -> &Vec<DiceSet> {
         &self.cache_get_valid_rolls[roll as usize].as_ref().unwrap().as_ref()
+    }
+    
+    pub fn get_num_dice(&self, dice: dice_set::DiceSet) -> usize {
+        self.cache_get_num_dice[dice as usize]
     }
 
     pub fn get_rolls(&self, dice_left: usize) -> &Vec<DiceSet> {

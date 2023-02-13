@@ -83,27 +83,33 @@ impl Precomputed {
     fn get_valid_holds_mut(&self, roll: dice_set::DiceSet) -> Vec<DiceSet> {
         let mut res: Vec<DiceSet> = Vec::new();
         let chars = dice_set::to_human_readable(roll);
+        let mut max_lt_k_score: ScoreType = 0;
         for k in 1..=chars.len() {
+            let mut k_combinations: Vec<DiceSet> = Vec::new();
             for comb in chars.iter().combinations(k) {
-                let score1 = self.calc_score(dice_set::from_human_readable_str(&comb));
-                if score1 == 0 { continue; }
-
-                let mut has_better_subset = false;
-
-                for k2 in 1..comb.len() {
-                    for comb2 in comb.iter().copied().combinations(k2) {
-                        let score2 = self.calc_score(dice_set::from_human_readable_str(&comb2));
-                        if score2 >= score1 {
-                            has_better_subset = true;
-                        }
-                    }
-                }
-
-                if has_better_subset { continue; }
-                // console::log_1(&dice_set::to_sorted_string(dice_set::from_human_readable_str(&comb)).into());
-                res.push(dice_set::from_human_readable_str(&comb));
+                let comb_dice = dice_set::from_human_readable_str(&comb);
+                k_combinations.push(comb_dice);
             }
+
+            // d1 is "better" than d2 if
+            // size(d1) <= size(d2), and
+            // score(d1) >= score(d2)
+            k_combinations.sort();
+            k_combinations.sort_by(|a, b| self.calc_score(*b).cmp(&self.calc_score(*a)));
+            
+            if k_combinations.len() == 0 { continue; }
+            let dice = *k_combinations.first().unwrap();
+            let max_k_score = self.calc_score(dice);
+            if max_k_score == 0 { continue; }
+            if max_k_score <= max_lt_k_score { continue; }
+            max_lt_k_score = ScoreType::max(max_lt_k_score, max_k_score);
+            if k == chars.len() {
+                return vec![dice];
+            }
+            res.push(dice);
         }
+        
+        assert!(res.len() <= 5, "{} {}", res.len(), dice_set::to_sorted_string(roll));
         res.sort();
         res
     }

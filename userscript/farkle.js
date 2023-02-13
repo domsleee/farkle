@@ -10,6 +10,10 @@ class Farkle {
     }
 
     async run() {
+        console.time('first action')
+        this.farkleSolver.decide_action_ext(0, 6, [0, 0]);
+        console.timeEnd('first action');
+
         while (true) {
             await this._waitForYourTurn();
             await this._doAction(this._getText());

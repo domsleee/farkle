@@ -57,7 +57,8 @@ impl FarkleSolverInternal {
         if held_score + scores[0] >= SCORE_WIN {
             return (get_val(1), Action::Stay);
         }
-        if *scores.iter().max().unwrap() >= SCORE_WIN {
+        let max_val = *scores.iter().max().unwrap();
+        if max_val >= SCORE_WIN {
             return (get_val(0), Action::Stay);
         }
 
@@ -87,11 +88,12 @@ impl FarkleSolverInternal {
         };
 
         // you can roll
-        // `get_ok_rolls` can be grouped by the output of `get_valid_holds`. e.g. 14 and 16 both have the same valid holds of [1]
         let mut prob_roll = get_val(0);
         if prob_win_stay < get_val(1) {
-            // (Vec<(DiceSet, ProbType)>, ProbType)
-            // (all_ok_rolls: Vec<DiceSet>, ok_rolls: Vec<(usize, ProbType)>, rem_prob: ProbType)
+            // improvement to reduce #calls to the cache of `decide_held_dice`
+            // instead of 
+            // * (Vec<(DiceSet, ProbType)>, ProbType), use
+            // * (all_holds: Vec<DiceSet>, ok_rolls: Vec<(Vec<usize>, ProbType)>, rem_prob: ProbType)
             let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls_merged(dice_left);
             debug_assert!(rem_prob > &0f64);
             *rotated_scores.last_mut().unwrap() += 50; // note: approx
@@ -111,7 +113,6 @@ impl FarkleSolverInternal {
 
     pub fn decide_held_dice(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, roll: dice_set::DiceSet, scores: &Vec<ScoreType>) -> (ProbType, dice_set::DiceSet) {
         //if DEBUG { println!("decide_held_dice({held_score}, {}, {scores:?})", to_sorted_string(roll)); }
-        //return (get_val(1), *self.precomputed.get_valid_holds(roll).iter().nth(0).unwrap_or(&0));
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
         for hold in self.precomputed.get_valid_holds(roll) {
             let new_held_score = held_score + self.precomputed.calc_score(*hold);

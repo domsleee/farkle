@@ -34,7 +34,15 @@ pub fn main() {
 
 fn bench_precompute() {
     let sw = Instant::now();
-    precompute::Precomputed::default();
+    let precomputed = precompute::Precomputed::default();
     let elapsed = sw.elapsed();
     println!("precomputed took {elapsed:?}");
+
+    for dice_left in 0..=6 {
+        let ok_rolls_len = precomputed.get_ok_rolls(dice_left).0.len();
+        let ok_rolls_merged_len = precomputed.get_ok_rolls_merged(dice_left).0.len();
+
+        println!("dice_left: {dice_left}: ok_rolls_len: {ok_rolls_len}, ok_rolls_merged_len: {ok_rolls_merged_len}");
+    }
+
 }

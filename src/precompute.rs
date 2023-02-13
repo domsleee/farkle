@@ -97,7 +97,7 @@ impl Precomputed {
             k_combinations.sort();
             k_combinations.sort_by(|a, b| self.calc_score(*b).cmp(&self.calc_score(*a)));
             
-            if k_combinations.len() == 0 { continue; }
+            if k_combinations.is_empty() { continue; }
             let dice = *k_combinations.first().unwrap();
             let max_k_score = self.calc_score(dice);
             if max_k_score == 0 { continue; }
@@ -227,7 +227,7 @@ impl Precomputed {
         }
 
         (
-            valid_holds_to_roll.values().map(|x| *x).collect(),
+            valid_holds_to_roll.values().copied().collect(),
             *rem_prob
         )
     }

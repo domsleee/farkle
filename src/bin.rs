@@ -26,7 +26,7 @@ struct Args {
 pub fn main() {
     bench_precompute();
     let args = Args::parse();
-    let scores = if args.scores.len() == 0 { vec![0, 0] } else { args.scores };
+    let scores = if args.scores.is_empty() { vec![0, 0] } else { args.scores };
     let mut solver = farkle_solver::FarkleSolver::default();
     dbg!(solver.decide_action_ext2(args.held_score, args.dice_left, scores));
     println!("cache size: {}", solver.get_cache_info());

@@ -95,7 +95,7 @@ impl Precomputed {
             // size(d1) <= size(d2), and
             // score(d1) >= score(d2)
             k_combinations.sort();
-            k_combinations.sort_by(|a, b| self.calc_score(*b).cmp(&self.calc_score(*a)));
+            k_combinations.sort_by_key(|b| std::cmp::Reverse(self.calc_score(*b)));
             
             if k_combinations.is_empty() { continue; }
             let dice = *k_combinations.first().unwrap();

@@ -2,16 +2,25 @@
 const log = console.log;
 
 class Farkle {
-    constructor(wasm_bindgen) {
-        const { FarkleSolver } = wasm_bindgen;
+    constructor(wasm_bindgen, SERVER) {
+        const { set_panic_hook, FarkleSolver, populate_solver, get_cache_cutoff } = wasm_bindgen;
+        set_panic_hook();
         this.farkleSolver = new FarkleSolver();
+        this.populate_solver = populate_solver;
+        this.cacheCutoff = get_cache_cutoff();
         this.dicePositions = {};
+        this.SERVER = SERVER;
         for (let id of this._getDiceIds()) this.dicePositions[id] = '';
     }
 
     async run() {
-        console.time('first action')
-        this.farkleSolver.decide_action_ext(0, 6, [0, 0]);
+        console.time('populate');
+        await this.populate_solver(`${this.SERVER}/cache.bincode`, this.farkleSolver);
+        console.timeEnd('populate');
+
+        console.time(`first action`)
+        console.log(`(0, 6, [${this.cacheCutoff}, 0]`);
+        this.farkleSolver.decide_action_ext(0, 6, [this.cacheCutoff, 0]);
         console.timeEnd('first action');
 
         while (true) {

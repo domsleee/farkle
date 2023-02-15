@@ -7,7 +7,7 @@ use crate::defs::*;
 
 use crate::precompute::Precomputed;
 
-type MutableCache = HashMap<u64, (ProbType, Action)>;
+pub type MutableCache = HashMap<u64, (ProbType, Action)>;
 
 const DEBUG: bool = false;
 #[wasm_bindgen]
@@ -47,6 +47,18 @@ impl FarkleSolver {
 impl FarkleSolver {
     pub fn decide_action_ext2(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> (ProbType, Action) {
         self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &scores)
+    }
+
+    pub fn get_cache_ref(&self) -> &MutableCache {
+        &self.cache_decide_action
+    }
+
+    pub fn set_cache(&mut self, cache: &MutableCache) {
+        self.cache_decide_action = cache.clone();
+    }
+
+    pub fn unpack_cache_key(&self, cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
+        FarkleSolverInternal::unpack_cache_key(cache_key)
     }
 }
 
@@ -141,4 +153,12 @@ impl FarkleSolverInternal {
     }
 
     fn score_to_byte(score: ScoreType) -> u8 { (score / 50) as u8 }
+    fn byte_to_score(byte: u8) -> ScoreType { (byte as ScoreType) * 50 }
+
+    pub fn unpack_cache_key(cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
+        let held_score = Self::byte_to_score((cache_key & 0xFF) as u8);
+        let dice_left = 1;
+        let scores: Vec<ScoreType> = vec![Self::byte_to_score(((cache_key >> 16) & 0xFF) as u8), 0];
+        return (held_score, dice_left, scores);
+    }
 }

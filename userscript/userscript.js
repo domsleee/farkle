@@ -16,7 +16,7 @@ class Runner {
         await loadWasm();
         await wasm_bindgen(`${SERVER}/farkle_bg.wasm`);
     
-        new window.Farkle(wasm_bindgen).run();
+        new window.Farkle(wasm_bindgen, SERVER).run();
     }
 }
 

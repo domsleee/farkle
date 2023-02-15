@@ -13,12 +13,12 @@ const DEBUG: bool = false;
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct FarkleSolver {
-    farkle_solver_internal: FarkleSolverInternal,
+    farkle_solver_internal: FarkleSolverInternal<2>,
     cache_decide_action: MutableCache
 }
 
 #[derive(Default)]
-struct FarkleSolverInternal {
+struct FarkleSolverInternal<const PLAYERS: usize = 2> {
     precomputed: Precomputed
 }
 
@@ -30,12 +30,12 @@ impl FarkleSolver {
     }
 
     pub fn decide_action_ext(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> String {
-        let (prob, action) = self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &scores);
+        let (prob, action) = self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &[scores[0], scores[1]]);
         action.to_string()
     }
 
     pub fn decide_held_dice_ext(&mut self, held_score: ScoreType, roll: String, scores: Vec<ScoreType>) -> String {
-        let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &scores);
+        let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &[scores[0], scores[1]]);
         dice_set::to_sorted_string(held_dice)
     }
 
@@ -46,7 +46,7 @@ impl FarkleSolver {
 
 impl FarkleSolver {
     pub fn decide_action_ext2(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> (ProbType, Action) {
-        self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &scores)
+        self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &[scores[0], scores[1]])
     }
 
     pub fn get_cache_ref(&self) -> &MutableCache {
@@ -58,14 +58,14 @@ impl FarkleSolver {
     }
 
     pub fn unpack_cache_key(&self, cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
-        FarkleSolverInternal::unpack_cache_key(cache_key)
+        FarkleSolverInternal::<2>::unpack_cache_key(cache_key)
     }
 }
 
-impl FarkleSolverInternal {
+impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
     // 22901694 in 4m32 
     // 200 * 6 * 200^2 = 48e6
-    fn decide_action(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> (ProbType, Action) {
+    fn decide_action(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, dice_left: usize, scores: &[ScoreType; PLAYERS]) -> (ProbType, Action) {
         if held_score + scores[0] >= SCORE_WIN {
             return (get_val(1), Action::Stay);
         }
@@ -123,7 +123,7 @@ impl FarkleSolverInternal {
         res
     }
 
-    pub fn decide_held_dice(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, roll: dice_set::DiceSet, scores: &Vec<ScoreType>) -> (ProbType, dice_set::DiceSet) {
+    pub fn decide_held_dice(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, roll: dice_set::DiceSet, scores: &[ScoreType; PLAYERS]) -> (ProbType, dice_set::DiceSet) {
         //if DEBUG { println!("decide_held_dice({held_score}, {}, {scores:?})", to_sorted_string(roll)); }
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
         for hold in self.precomputed.get_valid_holds(roll) {
@@ -141,7 +141,7 @@ impl FarkleSolverInternal {
         (max_prob, max_comb)
     }
 
-    fn get_cache_key(held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> u64 {
+    fn get_cache_key(held_score: ScoreType, dice_left: usize, scores: &[ScoreType; PLAYERS]) -> u64 {
         debug_assert!(scores.len() < 7);
         let mut key = 0u64;
         key |= Self::score_to_byte(held_score) as u64;

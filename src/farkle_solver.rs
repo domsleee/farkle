@@ -73,7 +73,7 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         if DEBUG { println!("decide_actionS({held_score}, {dice_left}, {scores:?})"); }
 
         let mut rotated_scores = {
-            let mut new_scores = scores.clone();
+            let mut new_scores = *scores;
             new_scores.rotate_left(1);
             new_scores
         };
@@ -83,7 +83,7 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
             let mut pstay = get_val(0);
             if held_score > 0 {
                 pstay = {
-                    let mut new_scores = rotated_scores.clone();
+                    let mut new_scores = rotated_scores;
                     *new_scores.last_mut().unwrap() += held_score;
                     get_val(1) - self.decide_action(mutable_data, 0, NUM_DICE, &new_scores).0
                 };
@@ -153,6 +153,6 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         let held_score = Self::byte_to_score((cache_key & 0xFF) as u8);
         let dice_left = 1;
         let scores: Vec<ScoreType> = vec![Self::byte_to_score(((cache_key >> 16) & 0xFF) as u8), 0];
-        return (held_score, dice_left, scores);
+        (held_score, dice_left, scores)
     }
 }

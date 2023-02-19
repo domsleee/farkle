@@ -1,7 +1,4 @@
 use std::collections::HashMap;
-
-use wasm_bindgen::prelude::wasm_bindgen;
-
 use crate::dice_set;
 use crate::defs::*;
 
@@ -10,62 +7,57 @@ use crate::precompute::Precomputed;
 pub type MutableCache = HashMap<u64, (ProbType, Action)>;
 
 const DEBUG: bool = false;
-#[wasm_bindgen]
+
 #[derive(Default)]
-pub struct FarkleSolver {
-    farkle_solver_internal: FarkleSolverInternal<2>,
-    cache_decide_action: MutableCache
+pub struct FarkleSolver<const PLAYERS: usize = 2> {
+    farkle_solver_internal: FarkleSolverInternal<PLAYERS>,
+    mutable_data: MutableData
 }
+
+#[derive(Default)]
+pub struct MutableData {
+    pub cache_decide_action: MutableCache,
+    pub nodes: usize,
+    pub nodes_dice_left: [usize; 7]
+}
+
 
 #[derive(Default)]
 struct FarkleSolverInternal<const PLAYERS: usize = 2> {
     precomputed: Precomputed
 }
 
-#[wasm_bindgen]
-impl FarkleSolver {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> FarkleSolver {
-        FarkleSolver::default()
+impl <const PLAYERS: usize> FarkleSolver<PLAYERS> {
+    pub fn decide_action_ext(&mut self, held_score: ScoreType, dice_left: usize, scores: [ScoreType; PLAYERS]) -> (ProbType, Action) {
+        self.farkle_solver_internal.decide_action(&mut self.mutable_data, held_score, dice_left, &scores)
     }
 
-    pub fn decide_action_ext(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> String {
-        let (prob, action) = self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &[scores[0], scores[1]]);
-        action.to_string()
+    pub fn decide_held_dice_ext(&mut self, held_score: ScoreType, roll: dice_set::DiceSet, scores: [ScoreType; PLAYERS]) -> (ProbType, dice_set::DiceSet) {
+        self.farkle_solver_internal.decide_held_dice(&mut self.mutable_data, held_score, roll, &scores)
     }
 
-    pub fn decide_held_dice_ext(&mut self, held_score: ScoreType, roll: String, scores: Vec<ScoreType>) -> String {
-        let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &[scores[0], scores[1]]);
-        dice_set::to_sorted_string(held_dice)
-    }
-
-    pub fn get_cache_info(&self) -> String {
-        self.cache_decide_action.len().to_string()
-    }
-}
-
-impl FarkleSolver {
-    pub fn decide_action_ext2(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> (ProbType, Action) {
-        self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &[scores[0], scores[1]])
-    }
-
-    pub fn get_cache_ref(&self) -> &MutableCache {
-        &self.cache_decide_action
+    pub fn get_mutable_data(&self) -> &MutableData {
+        &self.mutable_data
     }
 
     pub fn set_cache(&mut self, cache: &MutableCache) {
-        self.cache_decide_action = cache.clone();
+        self.mutable_data.cache_decide_action = cache.clone();
     }
 
     pub fn unpack_cache_key(&self, cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
         FarkleSolverInternal::<2>::unpack_cache_key(cache_key)
+    }
+
+    pub fn get_nodes_dice_left(&self) -> [usize; 7] {
+        self.mutable_data.nodes_dice_left
     }
 }
 
 impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
     // 22901694 in 4m32 
     // 200 * 6 * 200^2 = 48e6
-    fn decide_action(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, dice_left: usize, scores: &[ScoreType; PLAYERS]) -> (ProbType, Action) {
+    fn decide_action(&self, mutable_data: &mut MutableData, held_score: ScoreType, dice_left: usize, scores: &[ScoreType; PLAYERS]) -> (ProbType, Action) {
+        mutable_data.nodes += 1;
         if held_score + scores[0] >= SCORE_WIN {
             return (get_val(1), Action::Stay);
         }
@@ -77,7 +69,7 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         debug_assert!(dice_left != 0);
         
         let cache_key = Self::get_cache_key(held_score, dice_left, scores);
-        if let Some(res) = cache_decide_action.get(&cache_key) { return *res }
+        if let Some(res) = mutable_data.cache_decide_action.get(&cache_key) { return *res }
         if DEBUG { println!("decide_actionS({held_score}, {dice_left}, {scores:?})"); }
 
         let mut rotated_scores = {
@@ -93,7 +85,7 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
                 pstay = {
                     let mut new_scores = rotated_scores.clone();
                     *new_scores.last_mut().unwrap() += held_score;
-                    get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &new_scores).0
+                    get_val(1) - self.decide_action(mutable_data, 0, NUM_DICE, &new_scores).0
                 };
             }
             pstay
@@ -109,9 +101,9 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
             let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls_merged(dice_left);
             debug_assert!(rem_prob > &0f64);
             *rotated_scores.last_mut().unwrap() += 50; // note: approx
-            prob_roll = rem_prob * (get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &rotated_scores).0);
+            prob_roll = rem_prob * (get_val(1) - self.decide_action(mutable_data, 0, NUM_DICE, &rotated_scores).0);
             for (roll, prob) in ok_rolls {
-                let decision = self.decide_held_dice(cache_decide_action, held_score, *roll, scores);
+                let decision = self.decide_held_dice(mutable_data, held_score, *roll, scores);
                 prob_roll += prob * decision.0;
             }
         }
@@ -119,20 +111,22 @@ impl <const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         let res = if prob_win_stay >= prob_roll { (prob_win_stay, Action::Stay) } else { (prob_roll, Action::Roll) };
         
         if DEBUG { println!("decide_actionE(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}"); }
-        cache_decide_action.insert(cache_key, res);
+        mutable_data.cache_decide_action.insert(cache_key, res);
         res
     }
 
-    pub fn decide_held_dice(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, roll: dice_set::DiceSet, scores: &[ScoreType; PLAYERS]) -> (ProbType, dice_set::DiceSet) {
+    pub fn decide_held_dice(&self, mutable_data: &mut MutableData, held_score: ScoreType, roll: dice_set::DiceSet, scores: &[ScoreType; PLAYERS]) -> (ProbType, dice_set::DiceSet) {
         //if DEBUG { println!("decide_held_dice({held_score}, {}, {scores:?})", to_sorted_string(roll)); }
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
+        let old_dice_left = self.precomputed.get_num_dice(roll);
         for hold in self.precomputed.get_valid_holds(roll) {
             let new_held_score = held_score + self.precomputed.calc_score(*hold);
-            let mut new_dice_left = self.precomputed.get_num_dice(roll) - self.precomputed.get_num_dice(*hold);
+            let mut new_dice_left = old_dice_left - self.precomputed.get_num_dice(*hold);
             if new_dice_left == 0 {
                 new_dice_left = 6;
             }
-            let (new_prob, _) = self.decide_action(cache_decide_action, new_held_score, new_dice_left, scores);
+            mutable_data.nodes_dice_left[old_dice_left] += 1;
+            let (new_prob, _) = self.decide_action(mutable_data, new_held_score, new_dice_left, scores);
             if new_prob > max_prob {
                 (max_prob, max_comb) = (new_prob, hold.to_owned());
             }

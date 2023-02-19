@@ -1,11 +1,14 @@
+use std::{io::BufWriter, fs::File};
+
+use itertools::Itertools;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
-use crate::{farkle_solver::{FarkleSolver, MutableCache}, console_log, log};
+use crate::{farkle_solver::{FarkleSolver, MutableCache}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
 
 
 #[wasm_bindgen]
-pub async fn populate_solver(url: String, solver: &mut FarkleSolver) -> Result<JsValue, JsValue> {
+pub async fn populate_solver(url: String, solver: &mut FarkleSolverWasm) -> Result<JsValue, JsValue> {
     let mut opts = RequestInit::new();
     opts.method("GET");
     opts.mode(RequestMode::Cors);
@@ -36,4 +39,19 @@ pub async fn populate_solver(url: String, solver: &mut FarkleSolver) -> Result<J
 
     console_log!("cache size {}", cache.len());
     Ok(JsValue::default())
+}
+
+pub fn write_solver(solver: &FarkleSolver<2>, path: String) {
+    println!("writing cache to file {path}");
+    let mut f = BufWriter::new(File::create(path).unwrap());
+    let mut cache = solver.get_mutable_data().cache_decide_action.clone();
+    let keys = solver.get_mutable_data().cache_decide_action.keys().clone().collect_vec();
+    for key in &keys {
+        let (held_score, _, scores) = solver.unpack_cache_key(**key);
+        if held_score != 0 {
+            cache.remove(key);
+        }
+    }
+    println!("writing {} keys, {}%...", cache.len(), 100.0 * (cache.len() as f64) / (solver.get_mutable_data().cache_decide_action.len() as f64));
+    bincode::serialize_into(&mut f, &cache).unwrap();
 }

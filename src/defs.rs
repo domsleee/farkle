@@ -8,14 +8,10 @@ pub const NUM_DICE: usize = 6;
 pub type ProbType = f64;
 pub type HumanReadableDiceSet = Vec<String>;
 pub type ScoreType = i32;
-pub const CACHE_CUTOFF: ScoreType = 500;
 
 pub fn get_val(v: i64) -> ProbType {
     v as f64
 }
-
-#[wasm_bindgen]
-pub fn get_cache_cutoff() -> ScoreType { CACHE_CUTOFF }
 
 #[wasm_bindgen]
 #[derive(Default, Copy, Clone, Debug, Serialize_repr, Deserialize_repr, PartialEq)]

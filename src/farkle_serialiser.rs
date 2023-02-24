@@ -1,10 +1,10 @@
-use std::{io::BufWriter, fs::File};
+use std::{io::{BufWriter, BufRead, Error, BufReader}, fs::File};
 
 use itertools::Itertools;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
-use crate::{farkle_solver::{FarkleSolver, MutableCache}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
+use crate::{farkle_solver::{FarkleSolver, DecideActionCache, unpack_cache_key}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
 
 
 #[wasm_bindgen]
@@ -28,11 +28,10 @@ pub async fn populate_solver(url: String, solver: &mut FarkleSolverWasm) -> Resu
     let data_arr = js_sys::Uint8Array
         ::new(&array_buffer)
         .to_vec();
-
     console_log!("data_arr len {}", data_arr.len());
     
     console_log!("deserialising...");
-    let cache: MutableCache = bincode::deserialize(&data_arr).unwrap();
+    let cache: DecideActionCache = bincode::deserialize(&data_arr).unwrap();
 
     console_log!("set cache");
     solver.set_cache(&cache);
@@ -41,13 +40,24 @@ pub async fn populate_solver(url: String, solver: &mut FarkleSolverWasm) -> Resu
     Ok(JsValue::default())
 }
 
-pub fn write_solver(solver: &FarkleSolver<2>, path: String) {
+pub fn populate_solver_from_file(solver: &mut FarkleSolver, file: String) -> Result<(), Error> {
+    let f = File::open(file)?;
+    let buf_reader = BufReader::new(f);
+    let cache: DecideActionCache = bincode::deserialize_from(buf_reader).unwrap();
+    solver.set_cache(&cache);
+    // for k in solver.get_mutable_data().cache_decide_action.keys() {
+    //     println!("{k} {:?}", unpack_cache_key(*k));
+    // }
+    Ok(())
+}
+
+pub fn write_solver(solver: &FarkleSolver<2>, path: &str) {
     println!("writing cache to file {path}");
     let mut f = BufWriter::new(File::create(path).unwrap());
     let mut cache = solver.get_mutable_data().cache_decide_action.clone();
     let keys = solver.get_mutable_data().cache_decide_action.keys().clone().collect_vec();
     for key in &keys {
-        let (held_score, _, scores) = solver.unpack_cache_key(**key);
+        let (held_score, _, _) = solver.unpack_cache_key(**key);
         if held_score != 0 {
             cache.remove(key);
         }

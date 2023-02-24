@@ -27,7 +27,7 @@ impl FarkleSolverWasm {
 }
 
 impl FarkleSolverWasm {
-    pub fn set_cache(&mut self, cache: &crate::farkle_solver::MutableCache) {
+    pub fn set_cache(&mut self, cache: &crate::farkle_solver::DecideActionCache) {
         self.solver.set_cache(cache);
     }
 }

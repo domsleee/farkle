@@ -46,7 +46,11 @@ pub fn to_sorted_string(d: DiceSet) -> String {
 
 pub fn from_char(c: char) -> DiceSet {
     let pos = CHARS.iter().position(|x| *x == c).unwrap();
-    POWS[pos]
+    from_ind(pos)
+}
+
+pub fn from_ind(ind: usize) -> DiceSet {
+    POWS[ind]
 }
 
 pub fn from_human_readable(readable: Vec<char>) -> DiceSet {

@@ -6,6 +6,7 @@ pub mod farkle_solver_wasm;
 pub mod defs;
 pub mod dice_set;
 pub mod precompute;
+pub mod solver_trait;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.

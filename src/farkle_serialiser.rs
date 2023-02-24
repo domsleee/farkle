@@ -1,10 +1,10 @@
-use std::{io::{BufWriter, BufRead, Error, BufReader}, fs::File};
+use std::{io::{BufWriter, Error, BufReader}, fs::File};
 
 use itertools::Itertools;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
-use crate::{farkle_solver::{FarkleSolver, DecideActionCache, unpack_cache_key}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
+use crate::{farkle_solver::{FarkleSolver, DecideActionCache}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
 
 
 #[wasm_bindgen]

@@ -24,6 +24,10 @@ impl FarkleSolverWasm {
         let (prob, held_dice) = self.solver.decide_held_dice_ext(held_score, dice_set::from_string(&roll), [scores[0], scores[1]]);
         dice_set::to_sorted_string(held_dice)
     }
+
+    pub fn get_is_approx(&self) -> bool {
+        self.solver.farkle_solver_internal.is_approx
+    }
 }
 
 impl FarkleSolverWasm {

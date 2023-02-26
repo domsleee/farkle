@@ -32,6 +32,7 @@ pub async fn populate_solver(url: String, solver: &mut FarkleSolverWasm) -> Resu
     
     console_log!("deserialising...");
     let cache: DecideActionCache = bincode::deserialize(&data_arr).unwrap();
+    console_log!("is approx: {}", solver.get_is_approx());
 
     console_log!("set cache");
     solver.set_cache(&cache);

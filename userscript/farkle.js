@@ -127,6 +127,7 @@ class Farkle {
             }
             if (!changed) break;
         }
+        console.log('dice stationary');
     }
 
     _getDiceIds() {

@@ -1,10 +1,11 @@
 
-To watch:
-```
-cargo watch -i .gitignore -i "pkg/*" -s "wasm-pack build --target no-modules --dev"
-```
+To develop, use `npm start`
 
-Also need to serve http from `pkg/`
-```
-npx http-server --cors
-```
+It runs three scripts
+* wasm-pack to compile rust to wasm, exporting to `pkg/`
+* webpack for the `userscript/` directory, exporting to `pkg/`
+* http-server of the `pkg/` directory
+
+### Results ?
+JSON.parse(localStorage['farkleSolver.results'])
+`{wins: 1260, loss: 974}`

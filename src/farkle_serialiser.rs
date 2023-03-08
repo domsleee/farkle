@@ -4,7 +4,7 @@ use itertools::Itertools;
 use wasm_bindgen::{prelude::wasm_bindgen, JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
-use crate::{farkle_solver::{FarkleSolver, DecideActionCache}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
+use crate::{farkle_solver::{FarkleSolver, DecideActionCache, unpack_cache_key}, utils::console_log, farkle_solver_wasm::FarkleSolverWasm};
 
 
 #[wasm_bindgen]
@@ -46,9 +46,9 @@ pub fn populate_solver_from_file(solver: &mut FarkleSolver, file: String) -> Res
     let buf_reader = BufReader::new(f);
     let cache: DecideActionCache = bincode::deserialize_from(buf_reader).unwrap();
     solver.set_cache(&cache);
-    // for k in solver.get_mutable_data().cache_decide_action.keys() {
-    //     println!("{k} {:?}", unpack_cache_key(*k));
-    // }
+    for k in solver.get_mutable_data().cache_decide_action.keys() {
+        println!("{k} {:?}", unpack_cache_key(*k));
+    }
     Ok(())
 }
 

@@ -146,8 +146,8 @@ impl Precomputed {
         let freqdist = dice_set::get_freqdist(dice);
         for c in dice_set::get_chars() {
             if freqdist[c] >= 4 {
-                let five_dice = c.to_string().repeat(4).to_string();
-                max_score = ScoreType::max(max_score, 1000 + self.calc_score(dice_set::subtract_dice(dice, &five_dice)));
+                let four_dice = c.to_string().repeat(4).to_string();
+                max_score = ScoreType::max(max_score, 1000 + self.calc_score(dice_set::subtract_dice(dice, &four_dice)));
             }
             if freqdist[c] >= 5 {
                 let five_dice = c.to_string().repeat(5).to_string();
@@ -159,8 +159,12 @@ impl Precomputed {
         }
 
         let vals: HashSet<usize> = HashSet::from_iter(freqdist.iter().map(|(_, b) | *b));
-        if vals.len() == 1 && *vals.iter().next().unwrap() == 2 && sorted_str.len() == 6 {
-            max_score = ScoreType::max(max_score, 1500);
+        if sorted_str.len() == 6 {
+            let only_twos = HashSet::from_iter([2]);
+            let four_and_two = HashSet::from_iter([2, 4]);
+            if vals == only_twos || vals == four_and_two {
+                max_score = ScoreType::max(max_score, 1500);
+            }
         }
 
         let res = max_score;
@@ -235,6 +239,8 @@ impl Precomputed {
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
+
     use crate::dice_set::{self};
 
     use super::Precomputed;
@@ -254,6 +260,9 @@ mod tests {
         assert_eq!(3000,precomputed.calc_score(dice_set::from_string("222222")));
         assert_eq!(1500,precomputed.calc_score(dice_set::from_string("112233")));
         assert_eq!(2500,precomputed.calc_score(dice_set::from_string("123456")));
+        assert_eq!(2500,precomputed.calc_score(dice_set::from_string("654321")));
+        assert_eq!(1500,precomputed.calc_score(dice_set::from_string("336666")));
+        assert_eq!(1100,precomputed.calc_score(dice_set::from_string("1111")));
     }
 
     #[test]
@@ -261,6 +270,16 @@ mod tests {
         let precomputed = Precomputed::default();
         let holds = precomputed.get_valid_holds(dice_set::from_string("14"));
         assert!(holds.len() == 1);
+    }
+
+    #[test]
+    pub fn test_ok_rolls() {
+        let precomputed = Precomputed::default();
+        let (ok_rolls, rem_prob) = precomputed.get_ok_rolls(2);
+        let ok_rolls_human = ok_rolls.iter().map(|x| (dice_set::to_sorted_string(x.0), x.1)).collect_vec();
+        let sum_ok: f64 = ok_rolls.iter().map(|x| x.1).sum();
+        println!("{:?} {sum_ok} {rem_prob}", ok_rolls_human);
+        assert!(false);
     }
 }
 

@@ -63,6 +63,9 @@ wasm-bindgen-test = "0.3.13"
 opt-level = 3
 debug = 1
 target-cpu='native'
+lto = true
+strip = true
+codegen-units = 1
 
 [[bin]]
 name = "mybin"

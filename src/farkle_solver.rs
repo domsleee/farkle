@@ -1,14 +1,12 @@
 use crate::defs::*;
 use crate::dice_set;
-use std::collections::HashMap;
-
 use crate::precompute::Precomputed;
+use log::trace;
+use std::collections::HashMap;
 
 type CacheKeyType = u32; // for 2 players
 pub type DecideActionCache = HashMap<CacheKeyType, (ProbType, Action)>;
-type PrevDecideActionCache = HashMap<CacheKeyType, ProbType>;
-
-const DEBUG: bool = false;
+pub type PrevDecideActionCache = HashMap<CacheKeyType, ProbType>;
 
 #[derive(Default)]
 pub struct FarkleSolver<const PLAYERS: usize = 2> {
@@ -120,9 +118,7 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         if let Some(res) = mutable_data.cache_decide_action.get(&cache_key) {
             return *res;
         }
-        if DEBUG {
-            println!("decide_actionS({held_score}, {dice_left}, {scores:?})");
-        }
+        trace!("decide_actionS({held_score}, {dice_left}, {scores:?})");
 
         let mut rotated_scores = {
             let mut new_scores = *scores;
@@ -183,9 +179,7 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
             (prob_roll, Action::Roll)
         };
 
-        if DEBUG {
-            println!("decide_actionE(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}");
-        }
+        trace!("decide_actionE(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}");
         mutable_data.cache_decide_action.insert(cache_key, res);
         res
     }
@@ -197,7 +191,6 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         roll: dice_set::DiceSet,
         scores: &[ScoreType; PLAYERS],
     ) -> (ProbType, dice_set::DiceSet) {
-        //if DEBUG { println!("decide_held_dice({held_score}, {}, {scores:?})", to_sorted_string(roll)); }
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
         let old_dice_left = self.precomputed.get_num_dice(roll);
         for hold in self.precomputed.get_valid_holds(roll) {

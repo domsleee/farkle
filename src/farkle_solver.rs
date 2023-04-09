@@ -4,8 +4,9 @@ use std::collections::HashMap;
 
 use crate::precompute::Precomputed;
 
-pub type DecideActionCache = HashMap<u64, (ProbType, Action)>;
-pub type PrevDecideActionCache = HashMap<u64, ProbType>;
+type CacheKeyType = u32; // for 2 players
+pub type DecideActionCache = HashMap<CacheKeyType, (ProbType, Action)>;
+type PrevDecideActionCache = HashMap<CacheKeyType, ProbType>;
 
 const DEBUG: bool = false;
 
@@ -85,7 +86,7 @@ impl<const PLAYERS: usize> FarkleSolver<PLAYERS> {
         self.mutable_data.cache_decide_action = cache.clone();
     }
 
-    pub fn unpack_cache_key(&self, cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
+    pub fn unpack_cache_key(&self, cache_key: CacheKeyType) -> (ScoreType, usize, Vec<ScoreType>) {
         unpack_cache_key(cache_key)
     }
 
@@ -223,19 +224,19 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
         held_score: ScoreType,
         dice_left: usize,
         scores: &[ScoreType; PLAYERS],
-    ) -> u64 {
+    ) -> CacheKeyType {
         debug_assert!(scores.len() < 7);
-        let mut key = 0u64;
-        key |= score_to_byte(held_score) as u64;
-        key |= (dice_left as u64) << 8;
+        let mut key: CacheKeyType = 0;
+        key |= score_to_byte(held_score) as CacheKeyType;
+        key |= (dice_left as CacheKeyType) << 8;
         for (i, score) in scores.iter().enumerate() {
-            key |= (score_to_byte(*score) as u64) << (16 + 8 * i);
+            key |= (score_to_byte(*score) as CacheKeyType) << (16 + 8 * i);
         }
         key
     }
 }
 
-pub fn unpack_cache_key(cache_key: u64) -> (ScoreType, usize, Vec<ScoreType>) {
+pub fn unpack_cache_key(cache_key: CacheKeyType) -> (ScoreType, usize, Vec<ScoreType>) {
     let held_score = byte_to_score((cache_key & 0xFF) as u8);
     let dice_left = ((cache_key >> 8) & 0xFF) as usize;
     let scores: Vec<ScoreType> = vec![

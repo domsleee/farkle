@@ -1,11 +1,15 @@
 
 
-## AI Gameplay (bottom player)
+## Farkle AI Gameplay (bottom player "You" is the AI)
 <p align="center">
     <img src="docs/gameplay.gif" width="65%" alt="gameplay" />
 </p>
 
-## Running built version
+^This repository is an AI for [https://cardgames.io/farkle/](https://cardgames.io/farkle/).
+
+The built-in API "Bill" is playing against the userscript AI "You".
+
+## Running the compiled version
 1. Install a userscript manager, e.g. [tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en)
 2. [Click here](https://github.com/domsleee/farkle/raw/gh-pages/userscript.user.js) to install the userscript from gh-pages
 3. Open https://cardgames.io/farkle/ to see it play

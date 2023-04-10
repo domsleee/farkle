@@ -4,19 +4,20 @@ use crate::precompute::Precomputed;
 use log::trace;
 use std::collections::HashMap;
 
-type CacheKeyType = u32; // for 2 players
-pub type DecideActionCache = HashMap<CacheKeyType, (ProbType, Action)>;
-pub type PrevDecideActionCache = HashMap<CacheKeyType, ProbType>;
+type CacheKeyType<const PLAYERS: usize> = u32; // for 2 players
+pub type DecideActionCache<const PLAYERS: usize> =
+    HashMap<CacheKeyType<PLAYERS>, (ProbType, Action)>;
+pub type PrevDecideActionCache<const PLAYERS: usize> = HashMap<CacheKeyType<PLAYERS>, ProbType>;
 
 #[derive(Default)]
 pub struct FarkleSolver<const PLAYERS: usize = 2> {
     pub farkle_solver_internal: FarkleSolverInternal<PLAYERS>,
-    mutable_data: MutableData,
+    mutable_data: MutableData<PLAYERS>,
 }
 
 #[derive(Default)]
-pub struct MutableData {
-    pub cache_decide_action: DecideActionCache,
+pub struct MutableData<const PLAYERS: usize> {
+    pub cache_decide_action: DecideActionCache<PLAYERS>,
     pub nodes: usize,
     pub nodes_dice_left: [usize; 7],
 }
@@ -24,7 +25,7 @@ pub struct MutableData {
 pub struct FarkleSolverInternal<const PLAYERS: usize = 2> {
     pub precomputed: Precomputed,
     pub is_approx: bool,
-    pub cache_previous_run: PrevDecideActionCache,
+    pub cache_previous_run: PrevDecideActionCache<PLAYERS>,
 }
 
 impl<const PLAYERS: usize> Default for FarkleSolverInternal<PLAYERS> {
@@ -70,11 +71,11 @@ impl<const PLAYERS: usize> FarkleSolver<PLAYERS> {
         self.mutable_data.cache_decide_action.reserve(22901694);
     }
 
-    pub fn get_mutable_data(&self) -> &MutableData {
+    pub fn get_mutable_data(&self) -> &MutableData<PLAYERS> {
         &self.mutable_data
     }
 
-    pub fn set_cache(&mut self, cache: &DecideActionCache) {
+    pub fn set_cache(&mut self, cache: &DecideActionCache<PLAYERS>) {
         self.farkle_solver_internal.cache_previous_run.clear();
         for (k, v) in cache.iter() {
             self.farkle_solver_internal
@@ -84,8 +85,11 @@ impl<const PLAYERS: usize> FarkleSolver<PLAYERS> {
         self.mutable_data.cache_decide_action = cache.clone();
     }
 
-    pub fn unpack_cache_key(&self, cache_key: CacheKeyType) -> (ScoreType, usize, Vec<ScoreType>) {
-        unpack_cache_key(cache_key)
+    pub fn unpack_cache_key(
+        &self,
+        cache_key: CacheKeyType<PLAYERS>,
+    ) -> (ScoreType, usize, Vec<ScoreType>) {
+        unpack_cache_key::<PLAYERS>(cache_key)
     }
 
     pub fn get_nodes_dice_left(&self) -> [usize; 7] {
@@ -98,7 +102,7 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
     // 200 * 6 * 200^2 = 48e6
     fn decide_action(
         &self,
-        mutable_data: &mut MutableData,
+        mutable_data: &mut MutableData<PLAYERS>,
         held_score: ScoreType,
         dice_left: usize,
         scores: &[ScoreType; PLAYERS],
@@ -114,7 +118,7 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
 
         debug_assert!(dice_left != 0);
 
-        let cache_key = Self::get_cache_key(held_score, dice_left, scores);
+        let cache_key = get_cache_key::<PLAYERS>(held_score, dice_left, scores);
         if let Some(res) = mutable_data.cache_decide_action.get(&cache_key) {
             return *res;
         }
@@ -156,14 +160,17 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
                             .decide_action(mutable_data, 0, NUM_DICE, &rotated_scores)
                             .0);
             } else {
-                let nx_cache_key = Self::get_cache_key(0, NUM_DICE, &rotated_scores);
+                let nx_cache_key = get_cache_key::<PLAYERS>(0, NUM_DICE, &rotated_scores);
                 prob_roll = rem_prob
                     * (PROB_CERTAIN
                         - self
                             .cache_previous_run
                             .get(&nx_cache_key)
                             .unwrap_or_else(|| {
-                                panic!("{nx_cache_key} {:?}", unpack_cache_key(nx_cache_key))
+                                panic!(
+                                    "{nx_cache_key} {:?}",
+                                    unpack_cache_key::<PLAYERS>(nx_cache_key)
+                                )
                             }));
             }
 
@@ -186,7 +193,7 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
 
     pub fn decide_held_dice(
         &self,
-        mutable_data: &mut MutableData,
+        mutable_data: &mut MutableData<PLAYERS>,
         held_score: ScoreType,
         roll: dice_set::DiceSet,
         scores: &[ScoreType; PLAYERS],
@@ -212,24 +219,26 @@ impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
 
         (max_prob, max_comb)
     }
-
-    pub fn get_cache_key(
-        held_score: ScoreType,
-        dice_left: usize,
-        scores: &[ScoreType; PLAYERS],
-    ) -> CacheKeyType {
-        debug_assert!(scores.len() < 7);
-        let mut key: CacheKeyType = 0;
-        key |= score_to_byte(held_score) as CacheKeyType;
-        key |= (dice_left as CacheKeyType) << 8;
-        for (i, score) in scores.iter().enumerate() {
-            key |= (score_to_byte(*score) as CacheKeyType) << (16 + 8 * i);
-        }
-        key
-    }
 }
 
-pub fn unpack_cache_key(cache_key: CacheKeyType) -> (ScoreType, usize, Vec<ScoreType>) {
+pub fn get_cache_key<const PLAYERS: usize>(
+    held_score: ScoreType,
+    dice_left: usize,
+    scores: &[ScoreType; PLAYERS],
+) -> CacheKeyType<PLAYERS> {
+    debug_assert!(scores.len() < 7);
+    let mut key: CacheKeyType<PLAYERS> = 0;
+    key |= score_to_byte(held_score) as CacheKeyType<PLAYERS>;
+    key |= (dice_left as CacheKeyType<PLAYERS>) << 8;
+    for (i, score) in scores.iter().enumerate() {
+        key |= (score_to_byte(*score) as CacheKeyType<PLAYERS>) << (16 + 8 * i);
+    }
+    key
+}
+
+pub fn unpack_cache_key<const PLAYERS: usize>(
+    cache_key: CacheKeyType<PLAYERS>,
+) -> (ScoreType, usize, Vec<ScoreType>) {
     let held_score = byte_to_score((cache_key & 0xFF) as u8);
     let dice_left = ((cache_key >> 8) & 0xFF) as usize;
     let scores: Vec<ScoreType> = vec![

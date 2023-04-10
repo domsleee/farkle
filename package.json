@@ -1,0 +1,14 @@
+{
+  "name": "farkle",
+  "collaborators": [
+    "Dom <domslee1@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "farkle_wasm_bg.wasm",
+    "farkle_wasm.js",
+    "farkle_wasm.d.ts"
+  ],
+  "browser": "farkle_wasm.js",
+  "types": "farkle_wasm.d.ts"
+}

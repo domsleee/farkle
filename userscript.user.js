@@ -219,9 +219,9 @@ const runner_log = console.log;
 class Runner {
     async run() {
         await loadWasm();
-        await wasm_bindgen(`${"https://github.com/domsleee/farkle/raw/gh-pages"}/farkle_wasm_bg.wasm`);
+        await wasm_bindgen(`${"https://domsleee.github.io/farkle"}/farkle_wasm_bg.wasm`);
     
-        new FarkleScript(wasm_bindgen, "https://github.com/domsleee/farkle/raw/gh-pages").run();
+        new FarkleScript(wasm_bindgen, "https://domsleee.github.io/farkle").run();
     }
 }
 
@@ -229,7 +229,7 @@ class Runner {
 // WASM files
 async function loadWasm() {
     let attempts = 0;
-    includeJs(`${"https://github.com/domsleee/farkle/raw/gh-pages"}/farkle_wasm.js`);
+    includeJs(`${"https://domsleee.github.io/farkle"}/farkle_wasm.js`);
     while (typeof wasm_bindgen == 'undefined') {
         attempts += 1;
         if (attempts === 5) {

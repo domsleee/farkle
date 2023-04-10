@@ -1,5 +1,8 @@
 
 ### Running built version
+1. Install userscript manager, e.g. [tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en)
+2. [Install userscript](https://github.com/domsleee/farkle/raw/gh-pages/userscript.user.js) from gh-pages
+3. Open https://cardgames.io/farkle/ to see it play
 
 ### To develop
 1. Run `npm i`

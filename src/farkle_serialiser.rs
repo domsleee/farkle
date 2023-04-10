@@ -33,9 +33,8 @@ pub async fn populate_solver(
     let resp: Response = resp_value.dyn_into().unwrap();
     console_log!("resp: {resp:?} OK? {}", resp.ok());
     if !resp.ok() {
-        console_log!("warning... no calculated");
         solver.set_is_approx(true);
-        return Ok(JsValue::default());
+        return Err(JsValue::from(format!("Could not load file {url}")));
     }
     assert!(resp.ok());
 

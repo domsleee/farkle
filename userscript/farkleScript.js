@@ -20,7 +20,23 @@ export class FarkleScript {
         console.log('w/ record', this._getLocalStorage());
 
         console.time('populate');
-        await this.populate_solver(`${this.SERVER}/exact.bincode`, this.farkleSolver);
+        const filesToTry = [
+            `${this.SERVER}/exact.bincode`,
+            `${this.SERVER}/approx.bincode`
+        ]
+        for (let i = 0; i < filesToTry.length; ++i) {
+            const file = filesToTry[i];
+            try {
+                await this.populate_solver(file, this.farkleSolver);
+                break;
+            } catch (e) {
+                console.log(e);
+                if (i == filesToTry.length-1) {
+                    console.log("WARNING!!! Could not load any cache file. Suggest running `cargo run --release -- approx`.\n"
+                    + "Otherwise be prepared to wait for several minutes while the entire tree is calculated in wasm");
+                }
+            }
+        }
         console.timeEnd('populate');
 
         console.time(`first action`)

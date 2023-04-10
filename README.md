@@ -2,7 +2,7 @@
 
 ## Farkle AI Gameplay (bottom player "You" is the AI)
 <p align="center">
-    <img src="docs/gameplay.gif" width="65%" alt="gameplay" />
+    <img src="docs/gameplay.gif" width="75%" alt="gameplay" />
 </p>
 
 ^This repository is an AI for [https://cardgames.io/farkle/](https://cardgames.io/farkle/).

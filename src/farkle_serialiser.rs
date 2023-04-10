@@ -70,7 +70,7 @@ pub fn populate_solver_from_file(
 }
 
 pub fn write_solver(solver: &FarkleSolver<2>, path: &PathBuf) -> Result<(), std::io::Error> {
-    fs::create_dir_all(&path.parent().expect("should have parent"))?;
+    fs::create_dir_all(path.parent().expect("should have parent"))?;
     println!("writing cache to file {path:?}");
     let mut f = BufWriter::new(File::create(path)?);
     let mut cache = solver.get_mutable_data().cache_decide_action.clone();

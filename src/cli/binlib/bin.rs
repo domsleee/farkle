@@ -13,7 +13,7 @@ pub fn run() -> Result<(), std::io::Error> {
     match &args.command {
         Commands::Relax(relaxation_args) => run_relaxation(&args, relaxation_args)?,
         Commands::Simulate(simulate_args) => run_simulate(&args, simulate_args)?,
-        Commands::Approx { approx_out } => run_approx(&args, &approx_out)?,
+        Commands::Approx { approx_out } => run_approx(&args, approx_out)?,
     }
     Ok(())
 }

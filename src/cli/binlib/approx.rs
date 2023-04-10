@@ -24,6 +24,6 @@ pub fn run_approx(args: &MyArgs, approx_out: &String) -> Result<(), std::io::Err
         println!("{k}: {}", solver.get_nodes_dice_left()[k]);
     }
 
-    farkle_serialiser::write_solver(&solver, &path_util::to_abs_path(&approx_out))?;
+    farkle_serialiser::write_solver(&solver, &path_util::to_abs_path(approx_out))?;
     Ok(())
 }

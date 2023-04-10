@@ -65,6 +65,6 @@ pub fn run_relaxation(
         }
     }
 
-    farkle_serialiser::write_solver(&solver, &&to_abs_path(&relaxation_args.exact_out))?;
+    farkle_serialiser::write_solver(&solver, &to_abs_path(&relaxation_args.exact_out))?;
     Ok(())
 }

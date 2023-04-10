@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, path::PathBuf};
 
 use crate::binlib::args::{MyArgs, SimulateArgs};
 use farkle::{
@@ -13,19 +13,11 @@ use rand::{Rng, SeedableRng};
 use stopwatch::Stopwatch;
 
 pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), io::Error> {
-    let mut solver = FarkleSolver::<2>::default();
-    let mut solver2 = FarkleSolver::<2>::default();
-
-    solver.farkle_solver_internal.is_approx = true;
-    if !solver.farkle_solver_internal.is_approx {
-        populate_solver_from_file(&mut solver, "pkg/exact.bincode".to_string())?;
-        println!("populated!");
-    }
-
-    solver2.farkle_solver_internal.is_approx = true;
+    let solver_approx = get_solver_from_file(true, &PathBuf::from("pkg/approx.bincode"))?;
+    let solver_exact = get_solver_from_file(false, &PathBuf::from("pkg/exact.bincode"))?;
 
     let num_games = 5000;
-    let mut solvers = vec![solver, solver2];
+    let mut solvers = vec![solver_approx, solver_exact];
 
     let default_scores = if simulate_args.scores.is_some() {
         [
@@ -123,6 +115,16 @@ pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), 
     let percs = [get_perc(num_wins[0], total), get_perc(num_wins[1], total)];
     println!("{num_wins:?} ({}, {})", percs[0], percs[1]);
     Ok(())
+}
+
+fn get_solver_from_file(
+    is_approx: bool,
+    file: &PathBuf,
+) -> Result<FarkleSolver<2>, std::io::Error> {
+    let mut solver = FarkleSolver::<2>::default();
+    solver.farkle_solver_internal.is_approx = is_approx;
+    populate_solver_from_file(&mut solver, file)?;
+    Ok(solver)
 }
 
 fn get_perc(a: u64, b: u64) -> String {

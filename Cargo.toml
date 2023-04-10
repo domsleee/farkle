@@ -3,7 +3,7 @@ name = "farkle"
 version = "0.1.0"
 authors = ["Dom <domslee97@gmail.com>"]
 edition = "2018"
-default-run = "mybin"
+default-run = "cli"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -69,8 +69,8 @@ strip = true
 codegen-units = 1
 
 [[bin]]
-name = "mybin"
-path = "src/bin/main.rs"
+name = "cli"
+path = "src/cli/main.rs"
 
 [target.wasm32-unknown-unknown]
 rustflags = [

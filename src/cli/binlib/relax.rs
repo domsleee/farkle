@@ -1,12 +1,17 @@
 use farkle::{
     defs::{get_val, ScoreType, NUM_DICE},
     farkle_serialiser,
-    farkle_solver::{self, get_cache_key, FarkleSolverInternal, PrevDecideActionCache},
+    farkle_solver::{self, get_cache_key, PrevDecideActionCache},
 };
 
 use crate::binlib::args::{MyArgs, RelaxationArgs};
 
-pub fn run_relaxation(_args: &MyArgs, relaxation_args: &RelaxationArgs) {
+use super::path_util::to_abs_path;
+
+pub fn run_relaxation(
+    _args: &MyArgs,
+    relaxation_args: &RelaxationArgs,
+) -> Result<(), std::io::Error> {
     let mut cache_prev_run = PrevDecideActionCache::default();
 
     let dice_left = NUM_DICE;
@@ -60,5 +65,6 @@ pub fn run_relaxation(_args: &MyArgs, relaxation_args: &RelaxationArgs) {
         }
     }
 
-    farkle_serialiser::write_solver(&solver, &relaxation_args.exact_out);
+    farkle_serialiser::write_solver(&solver, &&to_abs_path(&relaxation_args.exact_out))?;
+    Ok(())
 }

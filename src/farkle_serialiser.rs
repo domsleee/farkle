@@ -1,6 +1,7 @@
 use std::{
-    fs::File,
-    io::{BufReader, BufWriter, Error},
+    fs::{self, File},
+    io::{BufReader, BufWriter},
+    path::PathBuf,
 };
 
 use crate::{
@@ -31,6 +32,11 @@ pub async fn populate_solver(
 
     let resp: Response = resp_value.dyn_into().unwrap();
     console_log!("resp: {resp:?} OK? {}", resp.ok());
+    if !resp.ok() {
+        console_log!("warning... no calculated");
+        solver.set_is_approx(true);
+        return Ok(JsValue::default());
+    }
     assert!(resp.ok());
 
     let array_buffer = JsFuture::from(resp.array_buffer()?).await?;
@@ -48,20 +54,25 @@ pub async fn populate_solver(
     Ok(JsValue::default())
 }
 
-pub fn populate_solver_from_file(solver: &mut FarkleSolver, file: String) -> Result<(), Error> {
+pub fn populate_solver_from_file(
+    solver: &mut FarkleSolver,
+    file: &PathBuf,
+) -> Result<(), std::io::Error> {
+    let file = fs::canonicalize(file)?;
     let f = File::open(file)?;
     let buf_reader = BufReader::new(f);
     let cache: DecideActionCache<2> = bincode::deserialize_from(buf_reader).unwrap();
     solver.set_cache(&cache);
     for k in solver.get_mutable_data().cache_decide_action.keys() {
-        println!("{k} {:?}", solver.unpack_cache_key(*k));
+        // println!("{k} {:?}", solver.unpack_cache_key(*k));
     }
     Ok(())
 }
 
-pub fn write_solver(solver: &FarkleSolver<2>, path: &str) {
-    println!("writing cache to file {path}");
-    let mut f = BufWriter::new(File::create(path).unwrap());
+pub fn write_solver(solver: &FarkleSolver<2>, path: &PathBuf) -> Result<(), std::io::Error> {
+    fs::create_dir_all(&path.parent().expect("should have parent"))?;
+    println!("writing cache to file {path:?}");
+    let mut f = BufWriter::new(File::create(path)?);
     let mut cache = solver.get_mutable_data().cache_decide_action.clone();
     let keys = solver
         .get_mutable_data()
@@ -81,4 +92,5 @@ pub fn write_solver(solver: &FarkleSolver<2>, path: &str) {
         100.0 * (cache.len() as f64) / (solver.get_mutable_data().cache_decide_action.len() as f64)
     );
     bincode::serialize_into(&mut f, &cache).unwrap();
+    Ok(())
 }

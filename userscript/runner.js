@@ -6,7 +6,7 @@ const SERVER = 'http://127.0.0.1:8080';
 export class Runner {
     async run() {
         await loadWasm();
-        await wasm_bindgen(`${SERVER}/farkle_bg.wasm`);
+        await wasm_bindgen(`${SERVER}/farkle_wasm_bg.wasm`);
     
         new FarkleScript(wasm_bindgen, SERVER).run();
     }
@@ -16,7 +16,7 @@ export class Runner {
 // WASM files
 async function loadWasm() {
     let attempts = 0;
-    includeJs(`${SERVER}/farkle.js`);
+    includeJs(`${SERVER}/farkle_wasm.js`);
     while (typeof wasm_bindgen == 'undefined') {
         attempts += 1;
         if (attempts === 5) {

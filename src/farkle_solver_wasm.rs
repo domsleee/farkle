@@ -68,6 +68,10 @@ impl FarkleSolverWasm {
     pub fn get_is_approx(&self) -> bool {
         self.solver.farkle_solver_internal.is_approx
     }
+
+    pub fn set_is_approx(&mut self, is_approx: bool) {
+        self.solver.farkle_solver_internal.is_approx = true;
+    }
 }
 
 impl FarkleSolverWasm {

@@ -1,5 +1,6 @@
 // ==UserScript==
 // @name          Farkle-production
+// @version       0.1.0
 // @match         https://cardgames.io/farkle*
 // ==/UserScript==
 /******/ (() => { // webpackBootstrap
@@ -64,7 +65,23 @@ class FarkleScript {
         console.log('w/ record', this._getLocalStorage());
 
         console.time('populate');
-        await this.populate_solver(`${this.SERVER}/exact.bincode`, this.farkleSolver);
+        const filesToTry = [
+            `${this.SERVER}/exact.bincode`,
+            `${this.SERVER}/approx.bincode`
+        ]
+        for (let i = 0; i < filesToTry.length; ++i) {
+            const file = filesToTry[i];
+            try {
+                await this.populate_solver(file, this.farkleSolver);
+                break;
+            } catch (e) {
+                console.log(e);
+                if (i == filesToTry.length-1) {
+                    console.log("WARNING!!! Could not load any cache file. Suggest running `cargo run --release -- approx`.\n"
+                    + "Otherwise be prepared to wait for several minutes while the entire tree is calculated in wasm");
+                }
+            }
+        }
         console.timeEnd('populate');
 
         console.time(`first action`)
@@ -219,9 +236,9 @@ const runner_log = console.log;
 class Runner {
     async run() {
         await loadWasm();
-        await wasm_bindgen(`${"https://domsleee.github.io/farkle"}/farkle_wasm_bg.wasm`);
+        await wasm_bindgen(`${"https://domsleee.github.io/farkle-ai"}/farkle_wasm_bg.wasm`);
     
-        new FarkleScript(wasm_bindgen, "https://domsleee.github.io/farkle").run();
+        new FarkleScript(wasm_bindgen, "https://domsleee.github.io/farkle-ai").run();
     }
 }
 
@@ -229,7 +246,7 @@ class Runner {
 // WASM files
 async function loadWasm() {
     let attempts = 0;
-    includeJs(`${"https://domsleee.github.io/farkle"}/farkle_wasm.js`);
+    includeJs(`${"https://domsleee.github.io/farkle-ai"}/farkle_wasm.js`);
     while (typeof wasm_bindgen == 'undefined') {
         attempts += 1;
         if (attempts === 5) {

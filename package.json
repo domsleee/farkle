@@ -6,7 +6,7 @@
         "wasm-pack": "cargo watch -i \"pkg/*\" -s \"wasm-pack build --target no-modules --out-name farkle_wasm\"",
         "http-serve": "npx http-server pkg --cors --silent",
         "webpack-watch": "npx webpack --watch --mode development",
-        "publish": "npx gh-pages -d pkg",
+        "publish": "npx webpack --mode production && npx gh-pages -d pkg",
         "start": "npx concurrently --kill-others \"npm run wasm-pack\" \"npm run http-serve\" \"npm run webpack-watch\""
     },
     "dependencies": {

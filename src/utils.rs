@@ -11,7 +11,6 @@ pub fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-
 #[wasm_bindgen]
 extern "C" {
     // Use `js_namespace` here to bind `console.log(..)` instead of just
@@ -47,4 +46,4 @@ macro_rules! console_log {
     ($($t:tt)*) => (crate::utils::log(&format_args!($($t)*).to_string()))
 }
 
-pub(crate) use console_log; 
+pub(crate) use console_log;

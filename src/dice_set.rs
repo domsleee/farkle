@@ -10,18 +10,26 @@ pub type DiceSet = u32;
 
 const BASE: u32 = 7u32;
 const POWS: &[u32] = &[
-    0, BASE.pow(0), BASE.pow(1), BASE.pow(2), BASE.pow(3),  BASE.pow(4),  BASE.pow(5)
+    0,
+    BASE.pow(0),
+    BASE.pow(1),
+    BASE.pow(2),
+    BASE.pow(3),
+    BASE.pow(4),
+    BASE.pow(5),
 ];
 
-const CHARS: &[char] = &[
-    '_', '1', '2', '3', '4', '5', '6'
-];
+const CHARS: &[char] = &['_', '1', '2', '3', '4', '5', '6'];
 
-pub fn get_chars() -> &'static [char] { &CHARS[1..] }
+pub fn get_chars() -> &'static [char] {
+    &CHARS[1..]
+}
 
 pub const MAX_VAL: u32 = BASE.pow(NUM_DICE as u32);
 
-pub fn empty() -> DiceSet { 0 }
+pub fn empty() -> DiceSet {
+    0
+}
 
 pub fn combine_diceset(d1: DiceSet, d2: DiceSet) -> DiceSet {
     d1 + d2
@@ -29,10 +37,14 @@ pub fn combine_diceset(d1: DiceSet, d2: DiceSet) -> DiceSet {
 
 pub fn to_human_readable(mut d: DiceSet) -> Vec<String> {
     let mut res = Vec::new();
-    if d == 0 { return res };
+    if d == 0 {
+        return res;
+    };
     for i in (1..POWS.len()).rev() {
         let m = d / POWS[i];
-        for _ in 0..m { res.push(CHARS[i].to_string())};
+        for _ in 0..m {
+            res.push(CHARS[i].to_string())
+        }
         d -= m * POWS[i];
     }
     res
@@ -74,7 +86,6 @@ pub fn from_human_readable_str(readable: &Vec<&String>) -> DiceSet {
     from_human_readable(res)
 }
 
-
 pub fn get_freqdist(d: DiceSet) -> FrequencyDistribution<char> {
     let mut freqdist = FrequencyDistribution::new();
     for s in to_human_readable(d) {
@@ -85,14 +96,18 @@ pub fn get_freqdist(d: DiceSet) -> FrequencyDistribution<char> {
 }
 
 pub fn subtract_dice(d1: DiceSet, s: &str) -> DiceSet {
-    debug_assert!(d1 >= from_string(s), "{d1} {} not bigger than {s} ({})", to_sorted_string(d1), from_string(s));
+    debug_assert!(
+        d1 >= from_string(s),
+        "{d1} {} not bigger than {s} ({})",
+        to_sorted_string(d1),
+        from_string(s)
+    );
     d1 - from_string(s)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dice_set::{to_sorted_string, from_string};
-
+    use crate::dice_set::{from_string, to_sorted_string};
 
     #[test]
     fn test_to_human_readable() {

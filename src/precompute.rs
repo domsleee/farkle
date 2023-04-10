@@ -1,10 +1,15 @@
-use std::{collections::{HashMap, HashSet}, iter::{FromIterator}};
 use is_sorted::IsSorted;
-use itertools::{Itertools, repeat_n};
+use itertools::{repeat_n, Itertools};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::FromIterator,
+};
 
-use crate::{dice_set::{self, DiceSet}, defs::{ScoreType, ProbType, get_val}};
+use crate::{
+    defs::{get_val, ProbType, ScoreType},
+    dice_set::{self, DiceSet},
+};
 extern crate web_sys;
-
 
 #[derive(Clone)]
 pub struct Precomputed {
@@ -24,7 +29,7 @@ impl Default for Precomputed {
             cache_get_num_dice: (0..=dice_set::MAX_VAL).map(|_| 0).collect(),
             cache_get_rolls: (0..=6).map(|_| Vec::new()).collect(),
             cache_get_ok_rolls: (0..=6).map(|_| (Vec::new(), get_val(0))).collect(),
-            cache_get_ok_rolls_grouped: (0..=6).map(|_| (Vec::new(), get_val(0))).collect()
+            cache_get_ok_rolls_grouped: (0..=6).map(|_| (Vec::new(), get_val(0))).collect(),
         };
 
         let mut all_valid_dicesets = Vec::new();
@@ -43,7 +48,8 @@ impl Default for Precomputed {
         for dice in &all_valid_dicesets {
             let vec = precomputed.get_valid_holds_mut(*dice);
             precomputed.cache_get_valid_rolls[*dice as usize] = Some(vec);
-            precomputed.cache_get_num_dice[*dice as usize] = dice_set::to_sorted_string(*dice).len();
+            precomputed.cache_get_num_dice[*dice as usize] =
+                dice_set::to_sorted_string(*dice).len();
         }
 
         for k in 0..=6 {
@@ -63,7 +69,7 @@ impl Precomputed {
     pub fn get_valid_holds(&self, roll: dice_set::DiceSet) -> &Vec<DiceSet> {
         self.cache_get_valid_rolls[roll as usize].as_ref().unwrap()
     }
-    
+
     pub fn get_num_dice(&self, dice: dice_set::DiceSet) -> usize {
         self.cache_get_num_dice[dice as usize]
     }
@@ -96,20 +102,31 @@ impl Precomputed {
             // score(d1) >= score(d2)
             k_combinations.sort();
             k_combinations.sort_by_key(|b| std::cmp::Reverse(self.calc_score(*b)));
-            
-            if k_combinations.is_empty() { continue; }
+
+            if k_combinations.is_empty() {
+                continue;
+            }
             let dice = *k_combinations.first().unwrap();
             let max_k_score = self.calc_score(dice);
-            if max_k_score == 0 { continue; }
-            if max_k_score <= max_lt_k_score { continue; }
+            if max_k_score == 0 {
+                continue;
+            }
+            if max_k_score <= max_lt_k_score {
+                continue;
+            }
             max_lt_k_score = ScoreType::max(max_lt_k_score, max_k_score);
             if k == chars.len() {
                 return vec![dice];
             }
             res.push(dice);
         }
-        
-        assert!(res.len() <= 5, "{} {}", res.len(), dice_set::to_sorted_string(roll));
+
+        assert!(
+            res.len() <= 5,
+            "{} {}",
+            res.len(),
+            dice_set::to_sorted_string(roll)
+        );
         res.sort();
         res
     }
@@ -133,13 +150,16 @@ impl Precomputed {
             // five of kind: 2000
             // six of kind: 3000
             // three pairs: 1500
-            ("123456", 2500)
+            ("123456", 2500),
         ]);
         let sorted_str = dice_set::to_sorted_string(dice);
 
         for (meld, score) in melds {
             if sorted_str.contains(meld) {
-                max_score = ScoreType::max(max_score, score + self.calc_score(dice_set::subtract_dice(dice, meld)));
+                max_score = ScoreType::max(
+                    max_score,
+                    score + self.calc_score(dice_set::subtract_dice(dice, meld)),
+                );
             }
         }
 
@@ -147,18 +167,24 @@ impl Precomputed {
         for c in dice_set::get_chars() {
             if freqdist[c] >= 4 {
                 let four_dice = c.to_string().repeat(4).to_string();
-                max_score = ScoreType::max(max_score, 1000 + self.calc_score(dice_set::subtract_dice(dice, &four_dice)));
+                max_score = ScoreType::max(
+                    max_score,
+                    1000 + self.calc_score(dice_set::subtract_dice(dice, &four_dice)),
+                );
             }
             if freqdist[c] >= 5 {
                 let five_dice = c.to_string().repeat(5).to_string();
-                max_score = ScoreType::max(max_score, 2000 + self.calc_score(dice_set::subtract_dice(dice, &five_dice)));
+                max_score = ScoreType::max(
+                    max_score,
+                    2000 + self.calc_score(dice_set::subtract_dice(dice, &five_dice)),
+                );
             }
             if freqdist[c] >= 6 {
                 max_score = ScoreType::max(max_score, 3000);
             }
         }
 
-        let vals: HashSet<usize> = HashSet::from_iter(freqdist.iter().map(|(_, b) | *b));
+        let vals: HashSet<usize> = HashSet::from_iter(freqdist.iter().map(|(_, b)| *b));
         if sorted_str.len() == 6 {
             let only_twos = HashSet::from_iter([2]);
             let four_and_two = HashSet::from_iter([2, 4]);
@@ -177,7 +203,10 @@ impl Precomputed {
             return vec![dice_set::empty()];
         }
         let mut res = Vec::new();
-        for comb in dice_set::get_chars().iter().combinations_with_replacement(dice_left) {
+        for comb in dice_set::get_chars()
+            .iter()
+            .combinations_with_replacement(dice_left)
+        {
             let act_comb = comb.iter().copied().join("");
             let new_dice_set = dice_set::from_string(&act_comb);
             res.push(new_dice_set);
@@ -203,7 +232,7 @@ impl Precomputed {
 
     fn get_roll_distribution(&self, dice_left: usize) -> HashMap<DiceSet, usize> {
         let mut roll_freq: HashMap<DiceSet, usize> = HashMap::new();
-        let iter =  dice_set::get_chars().iter();
+        let iter = dice_set::get_chars().iter();
         for comb in repeat_n(iter, dice_left).multi_cartesian_product() {
             let act_comb = comb.iter().copied().join("");
             let new_dice_set = dice_set::from_string(&act_comb);
@@ -213,9 +242,12 @@ impl Precomputed {
         roll_freq
     }
 
-    fn get_ok_rolls_grouped_mut(&mut self, dice_left: usize) -> (Vec<(DiceSet, ProbType)>, ProbType) {
+    fn get_ok_rolls_grouped_mut(
+        &mut self,
+        dice_left: usize,
+    ) -> (Vec<(DiceSet, ProbType)>, ProbType) {
         // idea: group ok_rolls by their valid_holds, and sum their probabilities
-        //       
+        //
         let (ok_rolls, rem_prob) = &self.get_ok_rolls(dice_left);
 
         let mut valid_holds_to_roll: HashMap<_, (DiceSet, ProbType)> = HashMap::new();
@@ -230,10 +262,7 @@ impl Precomputed {
             }
         }
 
-        (
-            valid_holds_to_roll.values().copied().collect(),
-            *rem_prob
-        )
+        (valid_holds_to_roll.values().copied().collect(), *rem_prob)
     }
 }
 
@@ -255,14 +284,29 @@ mod tests {
         assert_eq!(400, precomputed.calc_score(dice_set::from_string("444")));
         assert_eq!(500, precomputed.calc_score(dice_set::from_string("555")));
         assert_eq!(600, precomputed.calc_score(dice_set::from_string("666")));
-        assert_eq!(1000,precomputed.calc_score(dice_set::from_string("2222")));
-        assert_eq!(2000,precomputed.calc_score(dice_set::from_string("22222")));
-        assert_eq!(3000,precomputed.calc_score(dice_set::from_string("222222")));
-        assert_eq!(1500,precomputed.calc_score(dice_set::from_string("112233")));
-        assert_eq!(2500,precomputed.calc_score(dice_set::from_string("123456")));
-        assert_eq!(2500,precomputed.calc_score(dice_set::from_string("654321")));
-        assert_eq!(1500,precomputed.calc_score(dice_set::from_string("336666")));
-        assert_eq!(1100,precomputed.calc_score(dice_set::from_string("1111")));
+        assert_eq!(1000, precomputed.calc_score(dice_set::from_string("2222")));
+        assert_eq!(2000, precomputed.calc_score(dice_set::from_string("22222")));
+        assert_eq!(
+            3000,
+            precomputed.calc_score(dice_set::from_string("222222"))
+        );
+        assert_eq!(
+            1500,
+            precomputed.calc_score(dice_set::from_string("112233"))
+        );
+        assert_eq!(
+            2500,
+            precomputed.calc_score(dice_set::from_string("123456"))
+        );
+        assert_eq!(
+            2500,
+            precomputed.calc_score(dice_set::from_string("654321"))
+        );
+        assert_eq!(
+            1500,
+            precomputed.calc_score(dice_set::from_string("336666"))
+        );
+        assert_eq!(1100, precomputed.calc_score(dice_set::from_string("1111")));
     }
 
     #[test]
@@ -276,10 +320,12 @@ mod tests {
     pub fn test_ok_rolls() {
         let precomputed = Precomputed::default();
         let (ok_rolls, rem_prob) = precomputed.get_ok_rolls(2);
-        let ok_rolls_human = ok_rolls.iter().map(|x| (dice_set::to_sorted_string(x.0), x.1)).collect_vec();
+        let ok_rolls_human = ok_rolls
+            .iter()
+            .map(|x| (dice_set::to_sorted_string(x.0), x.1))
+            .collect_vec();
         let sum_ok: f64 = ok_rolls.iter().map(|x| x.1).sum();
         println!("{:?} {sum_ok} {rem_prob}", ok_rolls_human);
         assert!(false);
     }
 }
-

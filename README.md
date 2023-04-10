@@ -1,7 +1,7 @@
 
-## Gameplay
 
-<img src="docs/gameplay.gif" align="right" width="50%" alt="gameplay" />
+## AI Gameplay (bottom player)
+<img src="docs/gameplay.gif" width="50%" alt="gameplay" />
 
 ## Running built version
 1. Install a userscript manager, e.g. [tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en)

@@ -16,7 +16,7 @@ pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), 
     let solver_approx = get_solver_from_file(true, &PathBuf::from("pkg/approx.bincode"))?;
     let solver_exact = get_solver_from_file(false, &PathBuf::from("pkg/exact.bincode"))?;
 
-    let num_games = 5000;
+    let num_games = simulate_args.games;
     let mut solvers = vec![solver_approx, solver_exact];
 
     let default_scores = if simulate_args.scores.is_some() {
@@ -35,7 +35,7 @@ pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), 
     for first_turn in 0..=1 {
         for game_id in 0..num_games {
             //println!("running game {game_id}");
-            let offset = 5000 * game_id;
+            let offset = 5000 * (game_id as u64);
             let mut game_scores: [ScoreType; 2] = default_scores;
 
             let mut turn_number = 0;
@@ -108,12 +108,15 @@ pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), 
     }
 
     for i in 0..=4 {
-        println!("stopwatch {i} {}", stopwatches[i].elapsed_ms());
+        println!("stopwatch {i} {}ms", stopwatches[i].elapsed_ms());
     }
 
     let total = num_wins.iter().sum();
     let percs = [get_perc(num_wins[0], total), get_perc(num_wins[1], total)];
-    println!("{num_wins:?} ({}, {})", percs[0], percs[1]);
+    println!(
+        "{num_wins:?} ({}, {}) (total_rolls: {total_rolls})",
+        percs[0], percs[1]
+    );
     Ok(())
 }
 

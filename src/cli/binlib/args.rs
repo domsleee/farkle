@@ -45,4 +45,7 @@ pub struct RelaxationArgs {
 pub struct SimulateArgs {
     #[arg(short, long, num_args = 2..)]
     pub scores: Option<Vec<ScoreType>>,
+
+    #[arg(long, default_value = "500")]
+    pub games: usize,
 }

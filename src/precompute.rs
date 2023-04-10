@@ -313,7 +313,7 @@ mod tests {
     pub fn test_get_valid_holds() {
         let precomputed = Precomputed::default();
         let holds = precomputed.get_valid_holds(dice_set::from_string("14"));
-        assert!(holds.len() == 1);
+        assert_eq!(1, holds.len());
     }
 
     #[test]
@@ -326,6 +326,5 @@ mod tests {
             .collect_vec();
         let sum_ok: f64 = ok_rolls.iter().map(|x| x.1).sum();
         println!("{:?} {sum_ok} {rem_prob}", ok_rolls_human);
-        assert!(false);
     }
 }

@@ -1,7 +1,6 @@
 import { FarkleScript } from './farkleScript';
 
 const log = console.log;
-const SERVER = 'http://127.0.0.1:8080';
 
 export class Runner {
     async run() {

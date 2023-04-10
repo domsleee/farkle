@@ -1,0 +1,17 @@
+{
+    "name": "farkle",
+    "version": "1.0.0",
+    "author": "Dom Slee <domslee1@gmail.com>",
+    "scripts": {
+        "wasm-pack": "cargo watch -i \"pkg/*\" -s \"wasm-pack build --target no-modules --out-name farkle_wasm\"",
+        "http-serve": "npx http-server pkg --cors --silent",
+        "webpack-watch": "npx webpack --watch --mode development",
+        "publish": "npx gh-pages -d pkg",
+        "start": "npx concurrently --kill-others \"npm run wasm-pack\" \"npm run http-serve\" \"npm run webpack-watch\""
+    },
+    "dependencies": {
+        "concurrently": "^7.6.0",
+        "webpack-cli": "^5.0.1",
+        "gh-pages": "^5.0.0"
+    }
+}

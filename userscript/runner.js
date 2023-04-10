@@ -1,22 +1,13 @@
-// ==UserScript==
-// @name          Farkle
-// @namespace     http://www.example.com/
-// @description   WASM test
-// @include       *
-// @require       file:C:\Users\user\git\farkle\userscript\farkle.js
-// @require       file:C:\Users\user\git\farkle\userscript\userscript.js
-// ==/UserScript==
+import { FarkleScript } from './farkleScript';
 
-(() => {
 const log = console.log;
-const SERVER = 'http://127.0.0.1:8080';
 
-class Runner {
+export class Runner {
     async run() {
         await loadWasm();
-        await wasm_bindgen(`${SERVER}/farkle_bg.wasm`);
+        await wasm_bindgen(`${SERVER}/farkle_wasm_bg.wasm`);
     
-        new window.Farkle(wasm_bindgen).run();
+        new FarkleScript(wasm_bindgen, SERVER).run();
     }
 }
 
@@ -24,7 +15,7 @@ class Runner {
 // WASM files
 async function loadWasm() {
     let attempts = 0;
-    includeJs(`${SERVER}/farkle.js`);
+    includeJs(`${SERVER}/farkle_wasm.js`);
     while (typeof wasm_bindgen == 'undefined') {
         attempts += 1;
         if (attempts === 5) {
@@ -42,11 +33,8 @@ function includeJs(jsFilePath) {
     document.body.appendChild(js);
 }
 
-new Runner().run();
-})();
-
 // MISC
-function sleep(ms) {
+export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 

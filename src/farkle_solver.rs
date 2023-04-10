@@ -1,101 +1,259 @@
+use crate::defs::*;
+use crate::dice_set;
+use crate::precompute::Precomputed;
+use log::trace;
 use std::collections::HashMap;
 
-use wasm_bindgen::prelude::wasm_bindgen;
+type CacheKeyType<const PLAYERS: usize> = u32; // for 2 players
+pub type DecideActionCache<const PLAYERS: usize> =
+    HashMap<CacheKeyType<PLAYERS>, (ProbType, Action)>;
+pub type PrevDecideActionCache<const PLAYERS: usize> = HashMap<CacheKeyType<PLAYERS>, ProbType>;
 
-use crate::dice_set;
-use crate::defs::*;
-use crate::precompute::Precomputed;
-
-type MutableCache = HashMap<(ScoreType, usize, Vec<ScoreType>), (ProbType, Action)>;
-
-#[wasm_bindgen]
 #[derive(Default)]
-pub struct FarkleSolver {
-    farkle_solver_internal: FarkleSolverInternal,
-    cache_decide_action: MutableCache
+pub struct FarkleSolver<const PLAYERS: usize = 2> {
+    pub farkle_solver_internal: FarkleSolverInternal<PLAYERS>,
+    mutable_data: MutableData<PLAYERS>,
 }
 
 #[derive(Default)]
-struct FarkleSolverInternal {
-    precomputed: Precomputed
+pub struct MutableData<const PLAYERS: usize> {
+    pub cache_decide_action: DecideActionCache<PLAYERS>,
+    pub nodes: usize,
+    pub nodes_dice_left: [usize; 7],
 }
 
-#[wasm_bindgen]
-impl FarkleSolver {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> FarkleSolver {
-        FarkleSolver::default()
-    }
-
-    pub fn decide_action_ext(&mut self, held_score: ScoreType, dice_left: usize, scores: Vec<ScoreType>) -> String {
-        let (prob, action) = self.farkle_solver_internal.decide_action(&mut self.cache_decide_action, held_score, dice_left, &scores);
-        return action.to_string();
-    }
-
-    pub fn decide_held_dice_ext(&mut self, held_score: ScoreType, roll: String, scores: Vec<ScoreType>) -> String {
-        let (prob, held_dice) = self.farkle_solver_internal.decide_held_dice(&mut self.cache_decide_action, held_score, dice_set::from_string(&roll), &scores);
-        return dice_set::to_sorted_string(held_dice).to_string();
-    }
+pub struct FarkleSolverInternal<const PLAYERS: usize = 2> {
+    pub precomputed: Precomputed,
+    pub is_approx: bool,
+    pub cache_previous_run: PrevDecideActionCache<PLAYERS>,
 }
 
-impl FarkleSolverInternal {
-    fn decide_action(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, dice_left: usize, scores: &Vec<ScoreType>) -> (ProbType, Action) {
-        if held_score > 0 {
-            return (1.00, Action::Stay);
+impl<const PLAYERS: usize> Default for FarkleSolverInternal<PLAYERS> {
+    fn default() -> Self {
+        FarkleSolverInternal {
+            precomputed: Precomputed::default(),
+            is_approx: false,
+            cache_previous_run: PrevDecideActionCache::default(),
         }
+    }
+}
+
+impl<const PLAYERS: usize> FarkleSolver<PLAYERS> {
+    pub fn decide_action_ext(
+        &mut self,
+        held_score: ScoreType,
+        dice_left: usize,
+        scores: [ScoreType; PLAYERS],
+    ) -> (ProbType, Action) {
+        self.farkle_solver_internal.decide_action(
+            &mut self.mutable_data,
+            held_score,
+            dice_left,
+            &scores,
+        )
+    }
+
+    pub fn decide_held_dice_ext(
+        &mut self,
+        held_score: ScoreType,
+        roll: dice_set::DiceSet,
+        scores: [ScoreType; PLAYERS],
+    ) -> (ProbType, dice_set::DiceSet) {
+        self.farkle_solver_internal.decide_held_dice(
+            &mut self.mutable_data,
+            held_score,
+            roll,
+            &scores,
+        )
+    }
+
+    pub fn make_suggested_reserves(&mut self) {
+        self.mutable_data.cache_decide_action.reserve(22901694);
+    }
+
+    pub fn get_mutable_data(&self) -> &MutableData<PLAYERS> {
+        &self.mutable_data
+    }
+
+    pub fn set_cache(&mut self, cache: &DecideActionCache<PLAYERS>) {
+        self.farkle_solver_internal.cache_previous_run.clear();
+        for (k, v) in cache.iter() {
+            self.farkle_solver_internal
+                .cache_previous_run
+                .insert(*k, v.0);
+        }
+        self.mutable_data.cache_decide_action = cache.clone();
+    }
+
+    pub fn unpack_cache_key(
+        &self,
+        cache_key: CacheKeyType<PLAYERS>,
+    ) -> (ScoreType, usize, Vec<ScoreType>) {
+        unpack_cache_key::<PLAYERS>(cache_key)
+    }
+
+    pub fn get_nodes_dice_left(&self) -> [usize; 7] {
+        self.mutable_data.nodes_dice_left
+    }
+}
+
+impl<const PLAYERS: usize> FarkleSolverInternal<PLAYERS> {
+    // 22901694 in 4m32
+    // 200 * 6 * 200^2 = 48e6
+    fn decide_action(
+        &self,
+        mutable_data: &mut MutableData<PLAYERS>,
+        held_score: ScoreType,
+        dice_left: usize,
+        scores: &[ScoreType; PLAYERS],
+    ) -> (ProbType, Action) {
+        mutable_data.nodes += 1;
         if held_score + scores[0] >= SCORE_WIN {
-            return (get_val(1), Action::Stay);
+            return (PROB_CERTAIN, Action::Stay);
+        }
+        let max_val = *scores.iter().max().unwrap();
+        if max_val >= SCORE_WIN {
+            return (PROB_IMPOSSIBLE, Action::Stay);
         }
 
-        let cache_key = (held_score, dice_left, scores.to_owned());
-        if cache_decide_action.contains_key(&cache_key) {
-            return *cache_decide_action.get(&cache_key).unwrap();
-        }
+        debug_assert!(dice_left != 0);
 
-        let rotated_scores = {
-            let mut new_scores = scores.clone();
+        let cache_key = get_cache_key::<PLAYERS>(held_score, dice_left, scores);
+        if let Some(res) = mutable_data.cache_decide_action.get(&cache_key) {
+            return *res;
+        }
+        trace!("decide_actionS({held_score}, {dice_left}, {scores:?})");
+
+        let mut rotated_scores = {
+            let mut new_scores = *scores;
             new_scores.rotate_left(1);
             new_scores
         };
 
         // you can stay
         let prob_win_stay = {
-            let mut new_scores = rotated_scores.clone();
-            *new_scores.last_mut().unwrap() += held_score;
-            get_val(1) - self.decide_action(cache_decide_action, 0, NUM_DICE, &new_scores).0
+            let mut pstay = PROB_IMPOSSIBLE;
+            if held_score > 0 {
+                pstay = {
+                    let mut new_scores = rotated_scores;
+                    *new_scores.last_mut().unwrap() += held_score;
+                    PROB_CERTAIN - self.decide_action(mutable_data, 0, NUM_DICE, &new_scores).0
+                };
+            }
+            pstay
         };
 
         // you can roll
-        // `get_ok_rolls` can be grouped by the output of `get_valid_holds`. e.g. 14 and 16 both have the same valid holds of [1]
-        let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls(dice_left);
-        let mut prob_roll = get_val(0);
-        if prob_win_stay < get_val(1) {
-            let mut new_scores = rotated_scores.clone();
-            let last_score = new_scores.last().unwrap();
-            *new_scores.last_mut().unwrap() = last_score + ScoreType::max(50, held_score);
-            prob_roll = rem_prob * (get_val(1) - self.decide_action(cache_decide_action, 0, 0, scores).0);
+        let mut prob_roll = PROB_IMPOSSIBLE;
+        if prob_win_stay < PROB_CERTAIN {
+            // improvement to reduce #calls to the cache of `decide_held_dice`
+            // instead of
+            // * (Vec<(DiceSet, ProbType)>d, ProbType), use
+            // * (all_holds: Vec<DiceSet>, ok_rolls: Vec<(Vec<usize>, ProbType)>, rem_prob: ProbType)
+            let (ok_rolls, rem_prob) = self.precomputed.get_ok_rolls_merged(dice_left);
+            debug_assert!(rem_prob > &0f64);
+            if self.is_approx {
+                *rotated_scores.last_mut().unwrap() += 50; // note: approx
+                prob_roll = rem_prob
+                    * (PROB_CERTAIN
+                        - self
+                            .decide_action(mutable_data, 0, NUM_DICE, &rotated_scores)
+                            .0);
+            } else {
+                let nx_cache_key = get_cache_key::<PLAYERS>(0, NUM_DICE, &rotated_scores);
+                prob_roll = rem_prob
+                    * (PROB_CERTAIN
+                        - self
+                            .cache_previous_run
+                            .get(&nx_cache_key)
+                            .unwrap_or_else(|| {
+                                panic!(
+                                    "{nx_cache_key} {:?}",
+                                    unpack_cache_key::<PLAYERS>(nx_cache_key)
+                                )
+                            }));
+            }
 
             for (roll, prob) in ok_rolls {
-                let decision = self.decide_held_dice(cache_decide_action, held_score, *roll, &scores);
+                let decision = self.decide_held_dice(mutable_data, held_score, *roll, scores);
                 prob_roll += prob * decision.0;
             }
         }
 
-        let res = (get_val(1), Action::Roll);
-        cache_decide_action.insert(cache_key, res);
+        let res = if prob_win_stay >= prob_roll {
+            (prob_win_stay, Action::Stay)
+        } else {
+            (prob_roll, Action::Roll)
+        };
+
+        trace!("decide_actionE(held_score: {held_score}, dice_left: {dice_left}, scores: {scores:?}): prob_win_stay: {prob_win_stay}, prob_roll: {prob_roll}");
+        mutable_data.cache_decide_action.insert(cache_key, res);
         res
     }
 
-    pub fn decide_held_dice(&self, cache_decide_action: &mut MutableCache, held_score: ScoreType, roll: dice_set::DiceSet, scores: &Vec<ScoreType>) -> (ProbType, dice_set::DiceSet) {
-        //return (get_val(1), *self.precomputed.get_valid_holds(roll).iter().nth(0).unwrap_or(&0));
+    pub fn decide_held_dice(
+        &self,
+        mutable_data: &mut MutableData<PLAYERS>,
+        held_score: ScoreType,
+        roll: dice_set::DiceSet,
+        scores: &[ScoreType; PLAYERS],
+    ) -> (ProbType, dice_set::DiceSet) {
         let (mut max_prob, mut max_comb) = (get_val(-1), dice_set::empty());
+        let old_dice_left = self.precomputed.get_num_dice(roll);
         for hold in self.precomputed.get_valid_holds(roll) {
-            let (new_prob, _) = self.decide_action(cache_decide_action, held_score, dice_set::to_sorted_string(*hold).len() - dice_set::to_sorted_string(*hold).len(), scores);
+            let new_held_score = held_score + self.precomputed.calc_score(*hold);
+            let mut new_dice_left = old_dice_left - self.precomputed.get_num_dice(*hold);
+            if new_dice_left == 0 {
+                new_dice_left = 6;
+            }
+            mutable_data.nodes_dice_left[old_dice_left] += 1;
+            let (new_prob, _) =
+                self.decide_action(mutable_data, new_held_score, new_dice_left, scores);
             if new_prob > max_prob {
                 (max_prob, max_comb) = (new_prob, hold.to_owned());
+                if max_prob == PROB_CERTAIN {
+                    break;
+                }
             }
         }
-        let res = (max_prob, max_comb);
-        res
+
+        (max_prob, max_comb)
     }
+}
+
+pub fn get_cache_key<const PLAYERS: usize>(
+    held_score: ScoreType,
+    dice_left: usize,
+    scores: &[ScoreType; PLAYERS],
+) -> CacheKeyType<PLAYERS> {
+    debug_assert!(scores.len() < 7);
+    let mut key: CacheKeyType<PLAYERS> = 0;
+    key |= score_to_byte(held_score) as CacheKeyType<PLAYERS>;
+    key |= (dice_left as CacheKeyType<PLAYERS>) << 8;
+    for (i, score) in scores.iter().enumerate() {
+        key |= (score_to_byte(*score) as CacheKeyType<PLAYERS>) << (16 + 8 * i);
+    }
+    key
+}
+
+pub fn unpack_cache_key<const PLAYERS: usize>(
+    cache_key: CacheKeyType<PLAYERS>,
+) -> (ScoreType, usize, Vec<ScoreType>) {
+    let held_score = byte_to_score((cache_key & 0xFF) as u8);
+    let dice_left = ((cache_key >> 8) & 0xFF) as usize;
+    let scores: Vec<ScoreType> = vec![
+        byte_to_score(((cache_key >> 16) & 0xFF) as u8),
+        byte_to_score(((cache_key >> 24) & 0xFF) as u8),
+    ];
+    (held_score, dice_left, scores)
+}
+
+#[inline]
+fn score_to_byte(score: ScoreType) -> u8 {
+    (score / 50) as u8
+}
+
+#[inline]
+fn byte_to_score(byte: u8) -> ScoreType {
+    (byte as ScoreType) * 50
 }

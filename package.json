@@ -1,6 +1,6 @@
 {
     "name": "farkle",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "author": "Dom Slee <domslee1@gmail.com>",
     "scripts": {
         "wasm-pack": "cargo watch -i \"pkg/*\" -s \"wasm-pack build --target no-modules --out-name farkle_wasm\"",

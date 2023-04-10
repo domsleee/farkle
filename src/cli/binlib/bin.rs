@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use crate::binlib::args::{Commands, MyArgs};
 
-use super::{approx::run_approx, relax::run_relaxation, simulate::run_simulate};
+use super::{approx::run_approx, exec::run_exec, relax::run_relaxation, simulate::run_simulate};
 
 pub fn run() -> Result<(), std::io::Error> {
     let args = MyArgs::parse();
@@ -14,6 +14,10 @@ pub fn run() -> Result<(), std::io::Error> {
         Commands::Relax(relaxation_args) => run_relaxation(&args, relaxation_args)?,
         Commands::Simulate(simulate_args) => run_simulate(&args, simulate_args)?,
         Commands::Approx { approx_out } => run_approx(&args, approx_out)?,
+        Commands::Exec {
+            scores,
+            cache_to_use,
+        } => run_exec(&cache_to_use)?,
     }
     Ok(())
 }

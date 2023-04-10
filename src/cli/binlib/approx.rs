@@ -5,11 +5,7 @@ use crate::binlib::path_util;
 use super::args::MyArgs;
 
 pub fn run_approx(args: &MyArgs, approx_out: &String) -> Result<(), std::io::Error> {
-    let scores = if args.scores.is_empty() {
-        vec![0, 0]
-    } else {
-        args.scores.clone()
-    };
+    let scores = vec![0, 0];
     let mut solver = farkle_solver::FarkleSolver::default();
     solver.farkle_solver_internal.is_approx = true;
     solver.make_suggested_reserves();

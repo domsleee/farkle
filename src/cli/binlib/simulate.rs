@@ -120,11 +120,14 @@ pub fn run_simulate(_args: &MyArgs, simulate_args: &SimulateArgs) -> Result<(), 
     Ok(())
 }
 
-fn get_solver_from_file(
+pub fn get_solver_from_file(
     is_approx: bool,
     file: &PathBuf,
 ) -> Result<FarkleSolver<2>, std::io::Error> {
     let mut solver = FarkleSolver::<2>::default();
+    if !file.exists() {
+        panic!("specified file {:?} does not exist!", file);
+    }
     solver.farkle_solver_internal.is_approx = is_approx;
     populate_solver_from_file(&mut solver, file)?;
     Ok(solver)

@@ -5,9 +5,6 @@ use farkle::defs::ScoreType;
 /// Solver CLI for farkle game
 #[clap(author, version, subcommand_required = true)]
 pub struct MyArgs {
-    #[arg(short, long, num_args = 2..)]
-    pub scores: Vec<ScoreType>,
-
     #[arg(short = 'H', long, default_value_t = 0)]
     pub held_score: ScoreType,
 
@@ -24,6 +21,14 @@ pub enum Commands {
     Approx {
         #[arg(long, default_value = "./pkg/approx.bincode")]
         approx_out: String,
+    },
+    /// Run one execution
+    Exec {
+        #[arg(short, long, num_args = 2..)]
+        scores: Vec<ScoreType>,
+
+        #[arg(long, default_value = "./pkg/exact.bincode")]
+        cache_to_use: String,
     },
     Relax(RelaxationArgs),
     Simulate(SimulateArgs),

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name          Farkle
+// @name          Farkle-production
 // @match         https://cardgames.io/farkle*
 // ==/UserScript==
 /******/ (() => { // webpackBootstrap

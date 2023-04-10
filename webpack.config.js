@@ -30,7 +30,7 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new webpack.DefinePlugin({
-        SERVER: JSON.stringify(isProd ? 'https://domsleee.github.io/farkle' : 'http://127.0.0.1:8080')
+        SERVER: JSON.stringify(isProd ? 'https://domsleee.github.io/farkle-ai' : 'http://127.0.0.1:8080')
       }),
       new webpack.BannerPlugin({
         banner,

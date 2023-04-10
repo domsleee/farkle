@@ -11,7 +11,7 @@ The AI named "You" is a userscript that users can install to play against the AI
 
 ## Running the compiled version
 1. Install a userscript manager, e.g. [tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en)
-2. [Click here](https://github.com/domsleee/farkle/raw/gh-pages/userscript.user.js) to install the userscript from gh-pages
+2. [Click here](https://github.com/domsleee/farkle-ai/raw/gh-pages/userscript.user.js) to install the userscript from gh-pages
 3. Open https://cardgames.io/farkle/ to see it play
 
 ## Results
